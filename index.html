@@ -3,941 +3,776 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a12">
+<meta name="theme-color" content="#0b0714">
 <title>BRAINROT.TV</title>
 <style>
-  :root{--bg:#0a0a12}
-  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;touch-action:manipulation}
-  html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:'Impact','Arial Black',system-ui,sans-serif;color:#fff}
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Impact,'Arial Black',system-ui,sans-serif;color:#fff;touch-action:none}
   #stage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#000}
-  #wrap{position:relative;width:100%;height:100%;max-width:540px;margin:0 auto;overflow:hidden;background:#0a0a12}
-  canvas{display:block;width:100%;height:100%}
-  .hint{position:absolute;left:0;right:0;bottom:14px;text-align:center;font-size:12px;letter-spacing:3px;opacity:.5;pointer-events:none}
-  .mute{position:absolute;top:10px;right:10px;width:38px;height:38px;border-radius:50%;background:rgba(0,0,0,.5);border:2px solid #fff;color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;z-index:30;cursor:pointer}
-  @media(min-width:560px){#wrap{box-shadow:0 0 80px rgba(0,0,0,.8)}}
+  #wrap{position:relative;width:100%;height:100%;max-width:540px;margin:0 auto;overflow:hidden;background:#0b0714}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+
+  /* ---------- DOM overlay screens (real buttons = reliable input) ---------- */
+  .screen{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 22px;text-align:center}
+  .hidden{display:none !important}
+  #titleScreen{background:radial-gradient(120% 90% at 50% 0%,#2a0f4a 0%,#0b0714 70%)}
+  .logo{font-size:52px;letter-spacing:2px;color:#ff3df0;line-height:1;text-shadow:0 0 24px rgba(255,61,240,.7),4px 4px 0 #000}
+  .sub{margin-top:10px;font-size:15px;color:#38f0ff;letter-spacing:1px}
+  .desc{margin-top:18px;font-family:system-ui,sans-serif;font-size:13px;line-height:1.6;color:#b8a9d9;max-width:420px}
+  .cast{display:flex;gap:14px;margin-top:22px}
+  .cast span{font-size:11px;color:#8a7ab0;font-family:system-ui,sans-serif}
+  .cast b{display:block;font-size:26px;margin-bottom:4px}
+  .btn{display:block;width:100%;max-width:340px;padding:18px 20px;border:none;border-radius:16px;font-family:Impact,'Arial Black',sans-serif;font-size:26px;letter-spacing:2px;color:#fff;cursor:pointer;transition:transform .08s}
+  .btn:active{transform:scale(.96)}
+  .btn-primary{background:#ff3df0;box-shadow:0 0 30px rgba(255,61,240,.55),0 6px 0 #8a1278;font-size:28px}
+  .btn-row{display:flex;gap:12px;width:100%;max-width:340px}
+  .btn-row .btn{font-size:18px;padding:14px}
+  .btn-ghost{background:rgba(255,255,255,.1);box-shadow:0 4px 0 rgba(0,0,0,.5)}
+
+  #selectScreen{background:linear-gradient(180deg,#120826,#0b0714);justify-content:flex-start;padding-top:34px}
+  .h-title{font-size:30px;letter-spacing:2px;text-shadow:3px 3px 0 #000}
+  .h-sub{font-family:system-ui,sans-serif;font-size:12px;color:#9a8ac0;margin:6px 0 18px}
+  .scene-list{width:100%;max-width:440px;display:flex;flex-direction:column;gap:11px;overflow-y:auto;padding-bottom:10px}
+  .scene-btn{display:flex;align-items:center;gap:14px;width:100%;padding:13px 16px;border-radius:14px;border:2px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;text-align:left;transition:transform .08s}
+  .scene-btn:active{transform:scale(.97)}
+  .scene-btn .ic{font-size:30px;width:40px;text-align:center}
+  .scene-btn .nm{font-size:19px;letter-spacing:1px;line-height:1.05}
+  .scene-btn .tg{display:block;font-family:system-ui,sans-serif;font-size:11px;color:#b8a9d9;margin-top:4px;font-weight:normal;letter-spacing:0}
+  .scene-btn .go{margin-left:auto;font-size:20px;opacity:.6}
+
+  #resultScreen{background:rgba(8,4,16,.88);backdrop-filter:blur(3px)}
+  .r-tier{font-size:40px;letter-spacing:2px;text-shadow:4px 4px 0 #000}
+  .r-line{font-family:system-ui,sans-serif;font-size:13px;color:#cfc2ea;margin-top:8px;max-width:320px}
+  .r-score{font-size:72px;line-height:1;margin-top:20px;text-shadow:4px 4px 0 #000}
+  .r-best{font-family:system-ui,sans-serif;font-size:13px;color:#9a8ac0;margin-top:8px}
+  .r-new{color:#ffd166;font-size:18px;margin-top:6px;animation:pulse 1s infinite}
+  .r-comment{margin-top:22px;font-size:16px;color:#38f0ff}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+
+  #muteBtn{position:absolute;top:10px;right:10px;z-index:30;width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.5);color:#fff;font-size:18px;cursor:pointer}
+  #quitBtn{position:absolute;top:10px;left:10px;z-index:30;width:42px;height:42px;border-radius:12px;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.4);color:#fff;font-size:18px;cursor:pointer;display:none}
+  @media(min-width:560px){#wrap{box-shadow:0 0 90px rgba(0,0,0,.9)}}
 </style>
 </head>
 <body>
-<div id="stage"><div id="wrap">
-  <canvas id="c"></canvas>
-  <div class="mute" id="mute">♪</div>
-</div></div>
+<div id="stage">
+  <div id="wrap">
+    <canvas id="game"></canvas>
+    <button id="muteBtn" aria-label="mute">♪</button>
+    <button id="quitBtn" aria-label="quit">✕</button>
+
+    <!-- TITLE -->
+    <div class="screen" id="titleScreen">
+      <div class="logo">BRAINROT.TV</div>
+      <div class="sub">a playable tiktok feed</div>
+      <div class="desc">Every scene's mechanic <b>IS</b> a viral meme format. Remove the meme and the gameplay breaks. No meme = no game. Wait, react, match the vibe, escalate — or get ratio'd.</div>
+      <div class="cast">
+        <span><b>🍳</b>GOOBER</span><span><b>🤖</b>SIR NUGGET</span><span><b>🥟</b>BAO BAO</span><span><b>🍞</b>GERALD</span>
+      </div>
+      <div style="height:26px"></div>
+      <button class="btn btn-primary" id="startBtn">START GAME</button>
+      <div style="height:12px"></div>
+      <div style="font-family:system-ui,sans-serif;font-size:11px;color:#6a5a8c">phone: tap &amp; hold · desktop: mouse &amp; space</div>
+    </div>
+
+    <!-- SELECT -->
+    <div class="screen hidden" id="selectScreen">
+      <div class="h-title">PICK A VIRAL FORMAT</div>
+      <div class="h-sub">each one is a different meme turned into the actual rule</div>
+      <div class="scene-list" id="sceneList"></div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="screen hidden" id="resultScreen">
+      <div style="font-family:system-ui,sans-serif;font-size:12px;letter-spacing:2px;color:#8a7ab0">— the feed moved on —</div>
+      <div class="r-tier" id="rTier">CRINGE</div>
+      <div class="r-line" id="rLine"></div>
+      <div class="r-score" id="rScore">0</div>
+      <div class="r-best" id="rBest"></div>
+      <div class="r-new hidden" id="rNew">NEW BEST 🔥</div>
+      <div class="r-comment" id="rComment"></div>
+      <div style="height:24px"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="againBtn">PLAY AGAIN</button>
+        <button class="btn btn-ghost" id="modesBtn">MODES</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 "use strict";
-/* ============================================================================
-   BRAINROT.TV  —  a playable TikTok feed.
-   Each scene's mechanic IS a TikTok viral FORMAT. Remove the meme, the
-   gameplay breaks. No meme = no game.
-   ============================================================================ */
+/* ==========================================================================
+   BRAINROT.TV v2 — DOM menus (real buttons) + canvas gameplay.
+   Input contract:
+     - menus  : DOM <button> clicks only (always reliable, file:// friendly)
+     - gameplay: pointerdown/up on canvas (clamped coords) + spacebar
+   No modules, no fetch, no external resources — double-click to play.
+   ========================================================================== */
 
-const C = document.getElementById('c');
-const X = C.getContext('2d');
-const MUTE = document.getElementById('mute');
+/* ------------------------------- DOM contract ------------------------------ */
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const titleScreen  = document.getElementById('titleScreen');
+const selectScreen = document.getElementById('selectScreen');
+const resultScreen = document.getElementById('resultScreen');
+const sceneList    = document.getElementById('sceneList');
+const muteBtn      = document.getElementById('muteBtn');
+const quitBtn      = document.getElementById('quitBtn');
+const rTier=document.getElementById('rTier'), rLine=document.getElementById('rLine'),
+      rScore=document.getElementById('rScore'), rBest=document.getElementById('rBest'),
+      rNew=document.getElementById('rNew'), rComment=document.getElementById('rComment');
+
 let W=0,H=0,DPR=1;
 function resize(){
   DPR = Math.min(window.devicePixelRatio||1, 2);
-  const r = C.getBoundingClientRect();
-  W = r.width; H = r.height;
-  C.width = Math.floor(W*DPR); C.height = Math.floor(H*DPR);
-  X.setTransform(DPR,0,0,DPR,0,0);
+  const rect = canvas.getBoundingClientRect();
+  W = rect.width; H = rect.height;
+  canvas.width = Math.max(1, Math.floor(W*DPR));
+  canvas.height = Math.max(1, Math.floor(H*DPR));
+  ctx.setTransform(DPR,0,0,DPR,0,0);
 }
 window.addEventListener('resize', resize);
 
-/* ----------------------------- audio engine ----------------------------- */
-const AUD = {
-  ctx:null, master:null, muted:false, bpm:150,
-  beat:0, nextBeat:0, started:0,
-  seq:null, // current loop scheduler
-  init(){
-    if(this.ctx) return;
-    try{ this.ctx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){return;}
-    this.master = this.ctx.createGain();
-    this.master.gain.value = 0.5;
-    this.master.connect(this.ctx.destination);
+/* --------------------------------- helpers -------------------------------- */
+const rand=(a,b)=>a+Math.random()*(b-a);
+const randi=(a,b)=>Math.floor(rand(a,b+1));
+const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+function wrapText(s,n){const o=[];let c='';for(const w of s.split(' ')){if((c+w).length>n){o.push(c);c=w+' ';}else c+=w+' ';}if(c)o.push(c);return o;}
+function shade(hex,amt){const c=parseInt(hex.slice(1),16);let r=(c>>16)&255,g=(c>>8)&255,b=c&255;if(amt>=0){r+=(255-r)*amt;g+=(255-g)*amt;b+=(255-b)*amt;}else{r*=1+amt;g*=1+amt;b*=1+amt;}return`rgb(${r|0},${g|0},${b|0})`;}
+function rgba(hex,a){const c=parseInt(hex.slice(1),16);return`rgba(${(c>>16)&255},${(c>>8)&255},${c&255},${a})`;}
+function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function setTheme(h){const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',h);}
+
+/* --------------------------------- audio ---------------------------------- */
+const Audio = {
+  ac:null, muted:false, beatTimer:null,
+  init(){ if(this.ac) return;
+    try{ this.ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
   },
-  resume(){ if(this.ctx && this.ctx.state==='suspended') this.ctx.resume(); },
-  blip(freq, dur, type='square', vol=0.18, slide=0){
-    if(!this.ctx||this.muted) return;
-    const t=this.ctx.currentTime, o=this.ctx.createOscillator(), g=this.ctx.createGain();
-    o.type=type; o.frequency.setValueAtTime(freq,t);
-    if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(40,freq+slide), t+dur);
-    g.gain.setValueAtTime(vol,t);
-    g.gain.exponentialRampToValueAtTime(0.0008,t+dur);
-    o.connect(g); g.connect(this.master); o.start(t); o.stop(t+dur+0.02);
+  resume(){ if(this.ac&&this.ac.state==='suspended') this.ac.resume(); },
+  tone(f,d,type,vol,slide){
+    if(!this.ac||this.muted)return; type=type||'square'; vol=vol||.15;
+    const t=this.ac.currentTime,o=this.ac.createOscillator(),g=this.ac.createGain();
+    o.type=type;o.frequency.setValueAtTime(f,t);
+    if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,f+slide),t+d);
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0008,t+d);
+    o.connect(g);g.connect(this.ac.destination);o.start(t);o.stop(t+d+.03);
   },
-  noise(dur, vol=0.12, hp=2000){
-    if(!this.ctx||this.muted) return;
-    const t=this.ctx.currentTime, n=Math.floor(this.ctx.sampleRate*dur);
-    const buf=this.ctx.createBuffer(1,n,this.ctx.sampleRate), d=buf.getChannelData(0);
-    for(let i=0;i<n;i++) d[i]=(Math.random()*2-1);
-    const s=this.ctx.createBufferSource(); s.buffer=buf;
-    const f=this.ctx.createBiquadFilter(); f.type='highpass'; f.frequency.value=hp;
-    const g=this.ctx.createGain(); g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.001,t+dur);
-    s.connect(f); f.connect(g); g.connect(this.master); s.start(t);
+  noise(d,vol){
+    if(!this.ac||this.muted)return;
+    const t=this.ac.currentTime,n=Math.floor(this.ac.sampleRate*d),b=this.ac.createBuffer(1,n,this.ac.sampleRate),da=b.getChannelData(0);
+    for(let i=0;i<n;i++)da[i]=Math.random()*2-1;
+    const s=this.ac.createBufferSource();s.buffer=b;
+    const f=this.ac.createBiquadFilter();f.type='highpass';f.frequency.value=3000;
+    const g=this.ac.createGain();g.gain.setValueAtTime(vol||.1,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+    s.connect(f);f.connect(g);g.connect(this.ac.destination);s.start(t);
   },
-  hit(){ this.blip(660,0.08,'square',0.2,-200); this.noise(0.05,0.08); },
-  miss(){ this.blip(120,0.18,'sawtooth',0.18,-40); },
-  serve(){ this.blip(880,0.05,'square',0.2); setTimeout(()=>this.blip(1320,0.12,'square',0.18),60); },
-  combo(n){ this.blip(440+n*40,0.1,'square',0.16,200); },
-  fail(){ this.blip(80,0.5,'sawtooth',0.22,-20); this.noise(0.4,0.1,400); },
-  win(){ [523,659,784,1046].forEach((f,i)=>setTimeout(()=>this.blip(f,0.12,'square',0.18),i*70)); },
-  // 150 BPM loop scheduler — calls onBeat every quarter
-  startLoop(onBeat){
-    if(!this.ctx) return;
-    this.started = this.ctx.currentTime;
-    this.nextBeat = this.started;
-    this.beat = 0;
-    const tick = ()=>{
-      const now = this.ctx.currentTime;
-      while(this.nextBeat < now + 0.15){
-        const when = this.nextBeat;
-        const b = this.beat;
-        setTimeout(()=>onBeat(b), Math.max(0,(when-now)*1000));
-        this.nextBeat += 60/this.bpm;
-        this.beat++;
-      }
-      this.seq = requestAnimationFrame(tick);
+  good(){this.tone(660,.08,'square',.18,-180);this.noise(.04,.06);},
+  great(){this.tone(880,.07,'square',.16);setTimeout(()=>this.tone(1175,.12,'square',.16),55);},
+  bad(){this.tone(140,.22,'sawtooth',.16,-60);},
+  win(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,.12,'square',.15),i*70));},
+  boom(){this.tone(70,.5,'sawtooth',.22,-30);this.noise(.4,.12);},
+  // 150 BPM chiptune-ish loop: kick on 0/2, hat on odd, little arp on 6
+  startBeat(){
+    if(!this.ac||this.beatTimer!==null)return;
+    let b=0;
+    const tick=()=>{
+      pulse(); // visuals breathe on the beat
+      if(this.muted){b++;return;}
+      const beat=b%4;
+      if(beat===0||beat===2){this.tone(110,.16,'sine',.22,-40);}
+      if(beat===1||beat===3){this.noise(.03,.05);}
+      if(beat===0){const n=[440,523,659,587][(b/4|0)%4];this.tone(n,.09,'square',.06);}
+      b++;
     };
     tick();
+    this.beatTimer=setInterval(tick, 60000/150);
   },
-  stopLoop(){ if(this.seq) cancelAnimationFrame(this.seq); this.seq=null; }
+  stopBeat(){ if(this.beatTimer!==null){clearInterval(this.beatTimer);this.beatTimer=null;} }
 };
-MUTE.addEventListener('click', ()=>{ AUD.init(); AUD.muted=!AUD.muted; MUTE.textContent = AUD.muted?'🔇':'♪'; });
+muteBtn.addEventListener('click',e=>{
+  e.stopPropagation(); Audio.init(); Audio.muted=!Audio.muted;
+  muteBtn.textContent=Audio.muted?'🔇':'♪';
+});
 
-/* ----------------------------- utilities ----------------------------- */
-const R = Math.random;
-function rnd(a,b){ return a+Math.random()*(b-a); }
-function rndi(a,b){ return Math.floor(rnd(a,b+1)); }
-function clamp(v,a,b){ return v<a?a:v>b?b:v; }
-function lerp(a,b,t){ return a+(b-a)*t; }
-function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-function ease(t){ return t<0.5? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
-function shade(hex, amt){ // amt -1..1
-  const c = parseInt(hex.slice(1),16);
-  let r=(c>>16)&255, g=(c>>8)&255, b=c&255;
-  if(amt>=0){ r+=((255-r)*amt)|0; g+=((255-g)*amt)|0; b+=((255-b)*amt)|0; }
-  else{ r=(r*(1+amt))|0; g=(g*(1+amt))|0; b=(b*(1+amt))|0; }
-  return `rgb(${r},${g},${b})`;
-}
-function hex2rgba(h,a){ const c=parseInt(h.slice(1),16); return `rgba(${(c>>16)&255},${(c>>8)&255},${c&255},${a})`; }
-function setTheme(hex){ document.querySelector('meta[name=theme-color]').setAttribute('content',hex); }
-
-/* ----------------------------- comment popups ----------------------------- */
-// TikTok comment-section voice. These react to the player's play like a feed.
-const REACT_BRO = [
-  "bro thought he could cook 💀","ain't no way 💀","nahhh","let him cook",
-  "bro is NOT real","why did he do that","real","based","💀💀💀","nah he cooked",
-  "bro thinks he's the main character","this you? 💀","L + ratio + ","skibidi toilet behavior",
-  "bro fumbled","caught in 4k","it's giving brainrot","touch grass challenge FAILED",
-  "bro is cooked","the aura is gone","🔥🔥🔥","🗿","he ATE","not the vibe",
-  "bro got fanum taxed","uncanny","oh no not again","W rant","cringe detected",
-];
-class Comments{
-  constructor(){ this.items=[]; }
-  fire(txt, color='#fff', big=false){
-    const x = big? W/2 : rnd(W*0.2, W*0.8);
-    this.items.push({ txt, color, big, x, y: big? H*0.4 : rnd(H*0.25,H*0.7), t:0, life: big?2.4:1.8, vy: big?-6:-22 });
-  }
-  random(c='#fff'){ this.fire(pick(REACT_BRO), c); }
-  update(dt){
-    for(const i of this.items){ i.t+=dt; i.y+=i.vy*dt; i.vy*=0.96; }
-    this.items = this.items.filter(i=>i.t<i.life);
-  }
-  draw(X){
-    X.textAlign='center'; X.textBaseline='middle';
-    for(const i of this.items){
-      const k = i.t/i.life; const a = k<0.15? k/0.15 : 1-(k-0.15)/0.85;
-      X.globalAlpha = clamp(a,0,1);
-      const sz = i.big? 34:20;
-      X.font = `${sz}px Impact, Arial Black`;
-      X.lineWidth=4; X.strokeStyle='rgba(0,0,0,0.85)'; X.strokeText(i.txt,i.x,i.y);
-      X.fillStyle=i.color; X.fillText(i.txt,i.x,i.y);
+/* ---------------------------- floating comment ---------------------------- */
+const REACTS=["bro thought 💀","ain't no way 💀","nahhh","let him cook","bro is NOT real",
+  "why did he do that","real","based","💀💀💀","nah he cooked","caught in 4k",
+  "it's giving brainrot","touch grass: FAILED","bro is cooked","the aura is gone","🔥🔥🔥",
+  "he ATE","W","L + ratio","skibidi behavior","uncanny","cringe alert","the goat","goated"];
+class Floaters{
+  constructor(){this.a=[];}
+  add(t,c,big){this.a.push({t,c:big||'#fff',big:!!big,x:W/2+(big?0:rand(-W*.22,W*.22)),y:big?H*.42:rand(H*.3,H*.7),age:0,life:big?2.2:1.4});}
+  react(c){this.add(pick(REACTS),c);}
+  update(dt){for(const f of this.a){f.age+=dt;f.y-=dt*(f.big?28:50);}this.a=this.a.filter(f=>f.age<f.life);}
+  draw(){
+    ctx.textAlign='center';
+    for(const f of this.a){
+      const k=f.age/f.life,a=k<.15?k/.15:1-(k-.15)/.85;
+      ctx.globalAlpha=clamp(a,0,1);
+      ctx.font=(f.b?'32px Impact':'19px Impact');
+      ctx.lineWidth=4;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.strokeText(f.t,f.x,f.y);
+      ctx.fillStyle=f.c;ctx.fillText(f.t,f.x,f.y);
     }
-    X.globalAlpha=1;
+    ctx.globalAlpha=1;
   }
 }
 
-/* ----------------------------- screen shake ----------------------------- */
-let SHAKE=0;
-function shake(v){ SHAKE=Math.max(SHAKE,v); }
+/* ------------------------------ visual juice ------------------------------ */
+let shakeAmt=0, pulseAmt=0;
+function addShake(v){shakeAmt=Math.max(shakeAmt,v);}
+function pulse(){pulseAmt=1;}
 
-/* ----------------------------- beat pulse ----------------------------- */
-let PULSE=0;
-function beat(){ PULSE=1; }
-
-/* ============================================================================
-   SCENE BASE
-   ============================================================================ */
+/* ============================================================
+   SCENES — meme FORMAT is the rule.
+   Each scene implements: reset(), update(dt), onDown(x,y), onUp(), draw()
+   ============================================================ */
 class Scene{
-  constructor(cfg){ Object.assign(this,cfg); this.t=0; this.over=false; }
-  reset(RUN){ this.t=0; this.over=false; this.RUN=RUN; this.score=0; this.lives=this.maxLives; this.onreset(); }
-  onreset(){}
-  hit(x,y){ this.score++; RUN.combo++; AUD.hit(); beat(); shake(6); }
-  miss(x,y){ this.lives--; RUN.combo=0; AUD.miss(); shake(10); RUN.comments.random(this.flash||'#fff'); }
-  update(dt){ this.t+=dt; if(this.lives<=0 && !this.over){ this.over=true; } }
-  display(){}
-  tap(x,y){}
+  constructor(cfg){Object.assign(this,cfg);this.floaters=new Floaters();}
+  reset(){
+    this.t=0;this.score=0;this.combo=0;this.lives=3;this.over=false;this.done=false;
+    this.floaters.a.length=0;this._reset();
+  }
+  fault(msg){
+    this.lives--;this.combo=0;
+    this.floaters.add(msg,this.flash,true);
+    Audio.bad();addShake(11);
+    if(this.lives<=0){this.over=true;Audio.boom();}
+  }
+  good(points,msg,big){
+    this.score+=points;this.combo+=points;
+    if(msg)this.floaters.add(msg,big?'#ffd166':'#ffffff',big);
+    if(points>=3)Audio.great();else Audio.good();
+    pulse();addShake(big?13:6);
+  }
+  update(dt){this.t+=dt;this.floaters.update(dt);}
+  _reset(){} onDown(){} onUp(){} draw(){}
 }
 
-/* ============================================================================
-   SCENE 1 — LET GOOBER COOK
-   FORMAT: "let him cook" → the patience/waiting IS the rule.
-   Don't tap during cook. Tap only in the brief SERVE window.
-   The longer you wait, the bigger the combo, but the window shrinks.
-   ============================================================================ */
+/* --- 1. LET GOOBER COOK : "let him cook" -> patience is the rule ---------- */
 class CookScene extends Scene{
-  onreset(){
-    this.cook=0; this.phase='cook'; this.window=0; this.served=0;
-    this.windowDur=0.45; this.target=2.2; this._lastTier=0;
-  }
+  _reset(){this.phase='cook';this.ct=0;this.st=0;this.cookDur=2.1;this.serveWin=.95;this._t=0;}
   update(dt){
     super.update(dt);
+    if(this.over)return;
     if(this.phase==='cook'){
-      this.cook += dt;
-      // the dish escalates in absurdity as it cooks — comment section reacts
-      if(this.cook>0.5 && this._lastTier<1){ this._lastTier=1; RUN.comments.fire("let him cook", shade(this.bg,-0.1)); }
-      if(this.cook>1.1 && this._lastTier<2){ this._lastTier=2; RUN.comments.fire("bro is COOKING", shade(this.bg,-0.1)); }
-      if(this.cook>1.8 && this._lastTier<3){ this._lastTier=3; RUN.comments.fire("NAH HE COOKED", '#fff'); }
-      if(this.cook >= this.target){ this.phase='serve'; this.window=0; }
-    } else {
-      this.window += dt;
-      if(this.window >= this.windowDur){
-        // missed the serve window → "you let it burn 💀"
-        this.over=true; RUN.comments.fire("you let it burn 💀", this.flash); AUD.fail();
+      this.ct+=dt;
+      if(this.ct>.5&&!this._t){this._t=1;this.floaters.add('let him cook...','#ffd166');}
+      if(this.ct>=this.cookDur){this.phase='serve';this.st=0;this.floaters.add('SERVE NOW — TAP!','#7dff8a',true);}
+    }else{
+      this.st+=dt;
+      if(this.st>=this.serveWin){
+        this._t=0;
+        this.fault('you let it burn 💀');
+        if(!this.over){this.phase='cook';this.ct=0;}
       }
     }
   }
-  tap(x,y){
-    if(this.over) return;
+  onDown(){
+    if(this.over)return;
     if(this.phase==='cook'){
-      // interrupting the cook = meme violation
-      RUN.comments.fire("BRO INTERRUPTED THE COOK 💀", this.flash);
-      this.lives--; RUN.combo=0; AUD.miss(); shake(12); this.cook=0; this._lastTier=0;
-    } else {
-      // served in window — bigger combo the closer to the flash
-      const perfect = this.window < this.windowDur*0.6;
-      const gain = perfect? 3:1;
-      this.score+=gain; RUN.combo+=gain;
-      RUN.comments.fire(perfect? "HE COOKED. HE ATE. 🔥": pick(["based serve","W food","the goat cooked"]), perfect?'#ffe08a':'#fff');
-      AUD.serve(); beat(); shake(perfect?14:8);
-      // reset for another round, slightly shorter window (escalation)
-      this.cook=0; this.phase='cook'; this._lastTier=0; this.target = Math.max(1.3, this.target-0.12); this.windowDur = Math.max(0.22, this.windowDur-0.03);
-      this.served++;
+      this.fault("DON'T INTERRUPT THE COOK 💀");
+      this.ct=0;this._t=0;
+    }else{
+      const perfect=this.st<this.serveWin*.55;
+      this.good(perfect?3:1, perfect?'HE COOKED. HE ATE. 🔥':pick(['based serve','W food','the goat cooked']), perfect);
+      this.cookDur=Math.max(1.1,this.cookDur-.09);
+      this.serveWin=Math.max(.45,this.serveWin-.045);
+      this.phase='cook';this.ct=0;this.st=0;this._t=0;
     }
   }
-  display(){
-    // kitchen warmth palette
-    const g = X.createLinearGradient(0,0,0,H);
-    g.addColorStop(0, this.bg); g.addColorStop(1, shade(this.bg,-0.35));
-    X.fillStyle=g; X.fillRect(0,0,W,H);
-    // steam particles
-    for(let i=0;i<14;i++){
-      const p=(this.t*30+i*40)%200/200;
-      X.globalAlpha=(1-p)*0.4; X.fillStyle='#fff';
-      X.beginPath(); X.arc(W/2 + Math.sin(i)*30, H*0.62 - p*120, 8+p*14, 0, 7); X.fill();
+  draw(){
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#3a2114');g.addColorStop(1,'#1a0d06');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // pot + goober
+    const py=H*.56;
+    // steam while cooking
+    if(this.phase==='cook')for(let i=0;i<10;i++){const p=(this.t*26+i*36)%180/180;ctx.globalAlpha=(1-p)*.35;ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(W/2+Math.sin(i*1.7)*34,py-70-p*110,6+p*12,0,7);ctx.fill();}
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#2a160c';ctx.fillRect(W*.22,py+16,W*.56,H*.16);
+    ctx.fillStyle='#4a2e18';ctx.beginPath();ctx.ellipse(W/2,py+18,W*.22,H*.055,0,0,7);ctx.fill();
+    // goober bobs on the beat
+    const bob=Math.sin(this.t*7)*3+pulseAmt*5;
+    drawGoober(W/2,py-52+bob,42);
+    // big timing ring around the pot
+    const cx=W/2,cy=py-10,R=Math.min(W,H)*.27;
+    ctx.lineWidth=10;ctx.strokeStyle='rgba(255,255,255,.15)';ctx.beginPath();ctx.arc(cx,cy,R,0,7);ctx.stroke();
+    if(this.phase==='cook'){
+      const k=this.ct/this.cookDur;
+      ctx.strokeStyle='#ffb347';ctx.beginPath();ctx.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+k*Math.PI*2);ctx.stroke();
+    }else{
+      const k=this.st/this.serveWin;
+      ctx.strokeStyle=k>.66?'#ff5a4d':'#7dff8a';
+      ctx.beginPath();ctx.arc(cx,cy,R,-Math.PI/2,-Math.PI/2+(1-k)*Math.PI*2);ctx.stroke();
     }
-    X.globalAlpha=1;
-    // stove
-    X.fillStyle='#2a1a12'; X.fillRect(W*0.2, H*0.66, W*0.6, H*0.2);
-    // pot
-    const potY = H*0.6;
-    X.fillStyle='#3a2418'; X.beginPath(); X.ellipse(W/2, potY, W*0.22, H*0.06,0,0,7); X.fill();
-    X.fillStyle='#5a3a22'; X.beginPath(); X.ellipse(W/2, potY-4, W*0.2, H*0.05,0,0,7); X.fill();
-    // GOOBER (blob chef) stirring — beat-synced bob
-    const bob = Math.sin(this.t*8)*4 + PULSE*6;
-    drawGoober(X, W/2, potY-50+bob, 46);
-    // spoon stir
-    X.strokeStyle='#8a5a2a'; X.lineWidth=6;
-    X.beginPath(); X.moveTo(W/2+30, potY-90+bob); const sa=this.t*6;
-    X.lineTo(W/2+Math.cos(sa)*16, potY+Math.sin(sa)*6); X.stroke();
-    // cook meter
-    const mw = W*0.6, mh=18, mx=W*0.2, my=H*0.12;
-    X.fillStyle='rgba(0,0,0,0.5)'; X.fillRect(mx-4,my-4,mw+8,mh+8);
-    X.fillStyle='#000'; X.fillRect(mx,my,mw,mh);
-    const p = this.phase==='cook'? this.cook/this.target : 1;
-    X.fillStyle = p>0.85? '#ffe08a':'#e8742a';
-    X.fillRect(mx,my,mw*p,mh);
-    X.fillStyle='#fff'; X.font='14px Impact'; X.textAlign='center';
-    X.fillText(this.phase==='cook'? `COOKING... ${Math.floor(p*100)}%` : 'SERVE!! TAP NOW', W/2, my-12);
-    // serve flash
-    if(this.phase==='serve'){
-      const f = (Math.sin(this.t*40)+1)/2;
-      X.fillStyle=`rgba(255,224,138,${0.3+0.4*f})`; X.fillRect(0,0,W,H);
-    }
+    // instruction
+    ctx.textAlign='center';ctx.fillStyle='#fff';ctx.font='22px Impact';
+    ctx.fillText(this.phase==='cook'?'COOKING... DO NOT TOUCH':'TAP TO SERVE!',W/2,H*.2);
+    ctx.font='13px Impact';ctx.fillStyle='#cbb89a';
+    ctx.fillText(this.phase==='cook'?'wait for the green serve window':'perfect timing = +3',W/2,H*.2+22);
+    drawHud(this);
+    this.floaters.draw();
   }
 }
 
-/* ============================================================================
-   SCENE 2 — NPC FARM
-   FORMAT: NPC streamer catchphrase spam → phrase-by-vibe matching IS the rule.
-   Phrases scroll like a feed. A vibe indicator at top. Tap matching phrases.
-   ============================================================================ */
-const NPC_LINES = [
-  "skibidi","what the sigma","fanum tax","ohio prime","rizzless","gyatt attack",
-  "based moment","the aura","brain empty","no thoughts","meal?","let him cook",
-  "touch grass","gooned","mewing streak","sigma grindset","looksmaxxing","grimace shake",
-  "rawdog time","npc behavior","cringe alert","the ratio","W moment","L bro",
-];
-class NpcScene extends Scene{
-  onreset(){ this.bands=[]; this.vibe=pick(this.vibes); this.vibeT=0; this.spawn=0; }
-  spawnBand(){
-    const txt = pick(NPC_LINES);
-    // is this phrase matching the current vibe? random ~55% match
-    const match = Math.random()<0.55;
-    this.bands.push({ txt, vibe: match? this.vibe : pick(this.vibes.filter(v=>v!==this.vibe)), x: W, y: rnd(H*0.25, H*0.78), v: rnd(70,130), match });
-  }
+/* --- 2. NPC FARM : catchphrase vibe matching is the rule ------------------ */
+const VIBES=[{s:'🔥',c:'#ff7a4d'},{s:'💀',c:'#e6e6e6'},{s:'🤡',c:'#ffd966'},{s:'🗿',c:'#9aa0b0'},{s:'😭',c:'#9fd0ff'}];
+const PHRASES=['skibidi moment','what the sigma','fanum tax incoming','ohio energy','rizzless king','gyATTACK',
+  'based behavior','the aura leaks','brain empty','no thoughts','meal?','touch grass','mewing streak',
+  'sigma grindset','looksmaxxing arc','rawdogging life','npc detected','cringe at max','ratio incoming','W moment','L bro','grimace era'];
+class VibeScene extends Scene{
+  _reset(){this.cards=[];this.vibe=pick(VIBES);this.vt=0;this.spawnT=0;}
   update(dt){
-    super.update(dt);
-    this.vibeT += dt;
-    if(this.vibeT > 2.6){ this.vibe=pick(this.vibes); this.vibeT=0; RUN.comments.fire(`vibe shift → ${this.vibe.sym}`, this.flash); }
-    this.spawn += dt;
-    const rate = Math.max(0.55, 1.3 - this.t*0.02); // escalation
-    if(this.spawn > rate){ this.spawn=0; this.spawnBand(); }
-    for(const b of this.bands) b.x -= b.v*dt;
-    this.bands = this.bands.filter(b=>b.x > -200);
-  }
-  tap(x,y){
-    if(this.over) return;
-    let hit=null, best=1e9;
-    for(const b of this.bands){ const d=Math.abs(b.x+60 - x) + Math.abs(b.y+14 - y); if(d<best && d<70){ best=d; hit=b; } }
-    if(!hit) return;
-    if(hit.vibe.sym === this.vibe.sym){
-      this.score++; RUN.combo++;
-      RUN.comments.fire(pick(["based","W follower","real","the goat"]), '#9afff0'); AUD.combo(RUN.combo); beat(); shake(5);
-    } else {
-      this.lives--; RUN.combo=0; RUN.comments.fire("cringe. wrong vibe 💀", this.flash); AUD.miss(); shake(10);
+    super.update(dt);if(this.over)return;
+    this.vt+=dt;
+    if(this.vt>4.5){this.vt=0;this.vibe=pick(VIBES);this.floaters.add(`vibe shift → ${this.vibe.s}`,this.vibe.c,true);Audio.tone(440,.12,'square',.12);}
+    this.spawnT+=dt;
+    const interval=Math.max(.6,1.35-this.t*.02);
+    if(this.spawnT>interval){this.spawnT=0;
+      const lane=randi(0,2);
+      const match=Math.random()<.55;
+      const v=match?this.vibe:pick(VIBES.filter(x=>x!==this.vibe));
+      this.cards.push({txt:pick(PHRASES),v,x:W+40,y:H*.34+lane*H*.13,w:230,h:46,speed:rand(95,150)+this.t*2});
     }
-    this.bands = this.bands.filter(b=>b!==hit);
+    for(const c of this.cards)c.x-=c.speed*dt;
+    this.cards=this.cards.filter(c=>c.x>-c.w-20);
   }
-  display(){
-    X.fillStyle=this.bg; X.fillRect(0,0,W,H);
-    // glitch bands bg
-    for(let i=0;i<5;i++){ X.fillStyle=hex2rgba(this.flash,0.05+0.05*Math.sin(this.t*3+i)); X.fillRect(0, rnd(0,H), W, rnd(10,40)); }
-    // feed frame
-    X.fillStyle='rgba(0,0,0,0.35)'; X.fillRect(0,H*0.18,W,H*0.7);
-    // SIR NUGGET NPC at left
-    drawSirNugget(X, 70, H*0.5, 40 + PULSE*4);
-    // vibe indicator
-    X.fillStyle='rgba(0,0,0,0.6)'; X.fillRect(0,0,W,H*0.14);
-    X.fillStyle='#fff'; X.font='20px Impact'; X.textAlign='center';
-    X.fillText('MATCH THE VIBE', W/2, H*0.06);
-    X.font='44px Impact'; X.fillStyle=this.vibe.color;
-    X.strokeStyle='#000'; X.lineWidth=4; X.strokeText(this.vibe.sym, W/2, H*0.11); X.fillText(this.vibe.sym, W/2, H*0.11);
-    // scrolling phrases
-    for(const b of this.bands){
-      X.font='22px Impact'; X.textAlign='left';
-      X.fillStyle = b.vibe.color;
-      X.strokeStyle='rgba(0,0,0,0.7)'; X.lineWidth=4;
-      X.strokeText(`${b.vibe.sym}  ${b.txt}`, b.x, b.y);
-      X.fillText(`${b.vibe.sym}  ${b.txt}`, b.x, b.y);
+  onDown(x,y){
+    if(this.over)return;
+    for(let i=this.cards.length-1;i>=0;i--){
+      const c=this.cards[i];
+      if(x>c.x&&x<c.x+c.w&&y>c.y-c.h/2&&y<c.y+c.h/2){
+        if(c.v.s===this.vibe.s){this.good(1,pick(['real','W follower','based','the goat']));}
+        else{this.fault('wrong vibe — cringe 💀');}
+        this.cards.splice(i,1);return;
+      }
     }
+    // empty taps: small neutral blip, no life loss (forgiving)
+    Audio.tone(300,.04,'square',.05);
+  }
+  draw(){
+    ctx.fillStyle='#14082a';ctx.fillRect(0,0,W,H);
+    // scanlines
+    ctx.fillStyle='rgba(255,61,240,.05)';for(let i=0;i<H;i+=6)ctx.fillRect(0,i,W,2);
+    // vibe header (sits under the HUD strip)
+    ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,H*.055,W,H*.105);
+    ctx.fillStyle='#fff';ctx.font='14px Impact';ctx.textAlign='center';
+    ctx.fillText('TAP CARDS MATCHING THE VIBE',W/2,H*.083);
+    ctx.font='30px Impact';ctx.fillStyle=this.vibe.c;ctx.fillText(this.vibe.s,W/2,H*.142);
+    // npc mascot
+    drawSirNugget(46,H*.5,28+pulseAmt*4);
+    // cards
+    for(const c of this.cards){
+      ctx.fillStyle='rgba(10,6,24,.85)';roundRect(c.x,c.y-c.h/2,c.w,c.h,12);ctx.fill();
+      ctx.strokeStyle=c.v.c;ctx.lineWidth=2;roundRect(c.x,c.y-c.h/2,c.w,c.h,12);ctx.stroke();
+      ctx.fillStyle=c.v.c;ctx.font='22px Impact';ctx.textAlign='left';ctx.textBaseline='middle';
+      ctx.fillText(c.v.s,c.x+12,c.y);
+      ctx.fillStyle='#fff';ctx.font='15px Impact';
+      ctx.fillText(c.txt,c.x+42,c.y);
+    }
+    ctx.textBaseline='alphabetic';
+    drawHud(this);
+    this.floaters.draw();
   }
 }
 
-/* ============================================================================
-   SCENE 3 — REACTION ROULETTE
-   FORMAT: comment reaction culture (💀😭🤡🔥🗿) → match emoji to event IS rule.
-   An absurd event flashes; tap the matching reaction.
-   ============================================================================ */
-const EVENTS = [
-  { name:"someone falls over for no reason", emoji:'💀' },
-  { name:"the most cringe thing you've seen", emoji:'🤡' },
-  { name:"pure unbothered energy", emoji:'🗿' },
-  { name:"absolute fire content", emoji:'🔥' },
-  { name:"you're crying real tears", emoji:'😭' },
-  { name:"bro did NOT just do that", emoji:'💀' },
-  { name:"the main character arrives", emoji:'🔥' },
-  { name:"it's giving nothing", emoji:'🗿' },
-  { name:"certified clown moment", emoji:'🤡' },
-  { name:"this broke you", emoji:'😭' },
-];
+/* --- 3. REACTION ROULETTE : comment emoji reactions are the rule --------- */
+const EVENTS=[
+  {t:'someone falls over for no reason',e:'💀'},{t:'the most cringe thing ever',e:'🤡'},
+  {t:'pure unbothered energy',e:'🗿'},{t:'absolute fire content',e:'🔥'},
+  {t:'you are crying real tears',e:'😭'},{t:'bro did NOT just do that',e:'💀'},
+  {t:'the main character walks in',e:'🔥'},{t:"it's giving nothing",e:'🗿'},
+  {t:'certified clown moment',e:'🤡'},{t:'this video broke you',e:'😭'}];
+const SLOTS=[{s:'💀',c:'#e6e6e6'},{s:'🤡',c:'#ffd966'},{s:'🗿',c:'#9aa0b0'},{s:'🔥',c:'#ff7a4d'},{s:'😭',c:'#9fd0ff'}];
 class ReactScene extends Scene{
-  onreset(){ this.event=null; this.eventT=0; this.window=2.2; this.idx=0; }
-  nextEvent(){
-    this.event = pick(EVENTS); this.eventT=0;
-    this.window = Math.max(0.9, 2.2 - this.t*0.025); // escalation
-    RUN.comments.fire(this.event.name, '#fff');
-  }
+  _reset(){this.ev=null;this.et=0;this.win=3.2;}
+  next(){this.ev=pick(EVENTS);this.et=0;this.win=Math.max(1.7,3.2-this.t*.03);}
   update(dt){
-    super.update(dt);
-    if(!this.event){ this.nextEvent(); return; }
-    this.eventT += dt;
-    if(this.eventT >= this.window){
-      // too slow — the feed moved on, you got ratio'd
-      this.lives--; RUN.combo=0; RUN.comments.fire("too slow. ratio'd 💀", this.flash); AUD.miss(); shake(9);
-      this.event=null;
+    super.update(dt);if(this.over)return;
+    if(!this.ev){this.next();return;}
+    this.et+=dt;
+    if(this.et>=this.win){this.fault("too slow — ratio'd 💀");if(!this.over)this.ev=null;}
+  }
+  onDown(x,y){
+    if(this.over||!this.ev)return;
+    if(y<H*.74)return; // only the reaction bar counts
+    const i=clamp(Math.floor(x/(W/5)),0,4);
+    if(SLOTS[i].s===this.ev.e){
+      const fast=this.et<this.win*.45;
+      this.good(fast?3:1,fast?pick(['INSTANT REACT 🔥','you get the internet','W comment']):pick(['real','accurate 💀','based']),fast);
+      this.ev=null;
+    }else{
+      this.fault(`bro thought ${SLOTS[i].s} 💀`);
+      if(!this.over)this.ev=null;
     }
   }
-  tap(x,y){
-    if(this.over) return;
-    if(!this.event) return;
-    const e = this.event;
-    // tap position maps to a reaction slot
-    const slots = ['💀','🤡','🗿','🔥','😭'];
-    const n = slots.length, w=W/n;
-    const i = clamp(Math.floor(x/w),0,n-1);
-    const chosen = slots[i];
-    if(chosen===e.emoji){
-      const gain = this.eventT < this.window*0.4 ? 3:1;
-      this.score+=gain; RUN.combo+=gain;
-      RUN.comments.fire(pick([`real. ${e.emoji}`,"based reaction","W comment","you get it"]), '#7affc0'); AUD.combo(RUN.combo); beat(); shake(gain>1?14:7);
-    } else {
-      this.lives--; RUN.combo=0; RUN.comments.fire(`bro thought ${chosen} 💀`, this.flash); AUD.miss(); shake(10);
+  draw(){
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#200418');g.addColorStop(1,'#08030e');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    if(this.ev){
+      const x=W*.08,y=H*.2,w=W*.84,h=H*.42;
+      ctx.fillStyle='rgba(0,0,0,.6)';roundRect(x,y,w,h,18);ctx.fill();
+      ctx.strokeStyle=this.et>this.win*.7?'#ff5a4d':'#ff3df0';ctx.lineWidth=3;roundRect(x,y,w,h,18);ctx.stroke();
+      ctx.fillStyle='#38f0ff';ctx.font='14px Impact';ctx.textAlign='center';ctx.fillText('POV:',W/2,y+28);
+      ctx.fillStyle='#fff';ctx.font='22px Impact';
+      wrapText(this.ev.t,22).forEach((ln,i)=>ctx.fillText(ln,W/2,y+62+i*27));
+      ctx.font='72px Impact';ctx.fillText(this.ev.e,W/2,y+h-34);
+      // timer bar
+      ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(x,y-10,w,5);
+      ctx.fillStyle=this.et>this.win*.7?'#ff5a4d':'#7dff8a';ctx.fillRect(x,y-10,w*(1-this.et/this.win),5);
     }
-    this.event=null;
-  }
-  display(){
-    X.fillStyle=this.bg; X.fillRect(0,0,W,H);
-    // neon flashes
-    for(let i=0;i<3;i++){ X.fillStyle=hex2rgba(this.flash, 0.04+0.04*Math.sin(this.t*4+i*2)); X.fillRect(rnd(0,W), rnd(0,H), rnd(40,160), rnd(4,10)); }
-    // event card
-    if(this.event){
-      const k = clamp(this.eventT/this.window,0,1);
-      X.fillStyle='rgba(0,0,0,0.55)'; X.fillRect(W*0.08, H*0.22, W*0.84, H*0.42);
-      X.strokeStyle = k>0.7? this.flash:'#fff'; X.lineWidth=3; X.strokeRect(W*0.08, H*0.22, W*0.84, H*0.42);
-      X.fillStyle='#fff'; X.textAlign='center'; X.font='16px Impact';
-      X.fillText('POV:', W/2, H*0.28);
-      X.font='22px Impact'; X.fillStyle=shade(this.flash,-0.1);
-      const lines = wrap(this.event.name, 22);
-      lines.forEach((ln,i)=> X.fillText(ln, W/2, H*0.36+i*26));
-      // a procedural absurd doodle
-      drawAbsurd(X, W/2, H*0.52, 50 + PULSE*8, this.event.emoji);
+    // reaction bar — 5 huge targets
+    const by=H*.74,bh=H*.26,sw=W/5;
+    for(let i=0;i<5;i++){
+      ctx.fillStyle=i%2?'rgba(255,255,255,.08)':'rgba(255,255,255,.14)';
+      ctx.fillRect(i*sw,by,sw-2,bh);
+      ctx.fillStyle=SLOTS[i].c;ctx.font='42px Impact';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(SLOTS[i].s,i*sw+sw/2,by+bh/2);
     }
-    // reaction slot bar
-    const slots=['💀','🤡','🗿','🔥','😭'];
-    const cols=['#e0e0e0','#ffd966','#b0b0b0','#ff6a4d','#9fd0ff'];
-    const n=slots.length, w=W/n, by=H*0.72, bh=H*0.2;
-    for(let i=0;i<n;i++){
-      X.fillStyle = i%2? 'rgba(0,0,0,0.4)': 'rgba(0,0,0,0.55)';
-      X.fillRect(i*w, by, w, bh);
-      X.fillStyle=cols[i]; X.font='40px Impact'; X.textAlign='center'; X.textBaseline='middle';
-      X.fillText(slots[i], i*w+w/2, by+bh/2);
-    }
-    X.textBaseline='alphabetic';
+    ctx.textBaseline='alphabetic';
+    ctx.fillStyle='rgba(255,255,255,.6)';ctx.font='12px Impact';ctx.textAlign='center';
+    ctx.fillText('tap the right reaction',W/2,by-8);
+    drawHud(this);
+    this.floaters.draw();
   }
 }
-function wrap(s,n){ const out=[]; let cur=''; for(const w of s.split(' ')){ if((cur+w).length>n){ out.push(cur); cur=w+' '; } else cur+=w+' '; } if(cur) out.push(cur); return out; }
 
-/* ============================================================================
-   SCENE 4 — ESCALATION STATION
-   FORMAT: "it gets worse" escalation videos → pushing chaos IS the rule.
-   Tap to add chaos layers. Push as far as possible before total collapse.
-   The chaos meter rises; over-escalate → "AIN'T NO WAY 💀" punchline explosion.
-   ============================================================================ */
+/* --- 4. ESCALATION STATION : "it gets worse" -> pushing chaos ------------- */
 class EscScene extends Scene{
-  onreset(){ this.chaos=0; this.layers=0; this.particles=[]; this.collapseT=0; this.collapsing=false; this.danger=false; }
+  _reset(){this.chaos=0;this.collapsing=false;this.ct2=0;this.ps=[];}
   update(dt){
     super.update(dt);
-    // chaos naturally drifts up — player must keep tapping to "feed" it
-    // but if it crosses the line, you collapse. Sweet spot = maximize layers.
-    if(!this.collapsing){
-      this.chaos += dt*8*(1+this.layers*0.05);
-      this.danger = this.chaos > 78;
-      if(this.chaos >= 100){ this.collapsing=true; this.collapseT=0; RUN.comments.fire("AIN'T NO WAY 💀💀💀", this.flash, true); AUD.fail(); shake(26); }
-      // spawn particles proportional to chaos
-      if(Math.random() < this.chaos/120){ this.particles.push({ x:rnd(W*0.15,W*0.85), y:H*0.5, vx:rnd(-60,60), vy:rnd(-180,-40), l:0, life:rnd(0.6,1.2), c:pick(['#ffd966','#ff6a2a','#ff3030','#fff']) }); }
-    } else {
-      this.collapseT += dt;
-      for(let i=0;i<6;i++) this.particles.push({ x:rnd(0,W), y:H*0.5, vx:rnd(-200,200), vy:rnd(-300,100), l:0, life:rnd(0.4,1), c:pick(['#ff3030','#ffd966','#fff']) });
-      if(this.collapseT>1.6) this.over=true;
+    if(this.collapsing){
+      this.ct2+=dt;
+      for(let i=0;i<5;i++)this.ps.push({x:rand(0,W),y:H*.5,vx:rand(-220,220),vy:rand(-320,80),a:0,l:rand(.4,1.1),c:pick(['#ff5a4d','#ffd166','#fff'])});
+      if(this.ct2>1.3){this.over=true;}
+    }else if(!this.over){
+      this.chaos+=dt*5*(1+this.score*.055);
+      if(this.chaos>=100){
+        this.collapsing=true;this.ct2=0;
+        this.floaters.add("AIN'T NO WAY 💀💀💀",this.flash,true);Audio.boom();addShake(28);
+      }
+      if(Math.random()<this.chaos/160)
+        this.ps.push({x:rand(W*.15,W*.85),y:H*.55,vx:rand(-50,50),vy:rand(-160,-30),a:0,l:rand(.6,1.3),c:pick(['#ffd166','#ff7a2a','#ff5a4d','#fff'])});
     }
-    for(const p of this.particles){ p.l+=dt; p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=260*dt; }
-    this.particles = this.particles.filter(p=>p.l<p.life && p.y<H+40);
+    for(const p of this.ps){p.a+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=260*dt;}
+    this.ps=this.ps.filter(p=>p.a<p.l&&p.y<H+40);
   }
-  tap(x,y){
-    if(this.over) return;
-    if(this.collapsing) return;
-    // each tap adds a chaos layer — the escalation itself is the score
-    this.layers++;
-    this.score++;
-    RUN.combo++;
-    RUN.comments.fire(pick([`+1 chaos (now ${this.layers})`,"it's getting worse","nah this is fine","keep going 🔥","push it"]), this.danger? this.flash:'#ffd966');
-    AUD.combo(RUN.combo); beat(); shake(this.danger?16:8);
-    // tapping bleeds off a little chaos (you "controlled" it briefly) but each layer raises the floor
-    this.chaos = Math.max(this.layers*4, this.chaos-12);
+  onDown(){
+    if(this.over||this.collapsing)return;
+    this.score++;this.combo++;
+    if(this.score%5===0)this.floaters.add(`x${this.score} CHAOS LAYERS`,this.chaos>75?'#ff5a4d':'#ffd166',true);
+    Audio.good();pulse();addShake(this.chaos>75?15:7);
+    this.chaos=Math.max(this.score*3,this.chaos-9);
   }
-  display(){
-    // lava palette, intensifies with chaos
-    const k = clamp(this.chaos/100,0,1);
-    const g=X.createLinearGradient(0,0,0,H);
-    g.addColorStop(0, shade(this.bg, -0.2+k*0.2)); g.addColorStop(1, shade(this.flash,-0.4+k*0.3));
-    X.fillStyle=g; X.fillRect(0,0,W,H);
-    // BAO BAO center blob, inflates with chaos
-    drawBaoBao(X, W/2, H*0.5, 40+this.layers*3+k*30+PULSE*5, k);
-    // particles
-    for(const p of this.particles){ X.globalAlpha=clamp(1-p.l/p.life,0,1); X.fillStyle=p.c; X.beginPath(); X.arc(p.x,p.y,4+ (1-p.l/p.life)*5,0,7); X.fill(); }
-    X.globalAlpha=1;
-    // chaos meter
-    const mw=W*0.7, mh=22, mx=W*0.15, my=H*0.12;
-    X.fillStyle='rgba(0,0,0,0.6)'; X.fillRect(mx-4,my-4,mw+8,mh+8);
-    X.fillStyle='#000'; X.fillRect(mx,my,mw,mh);
-    const col = k>0.78? '#ff3030': k>0.5? '#ffd966':'#7affc0';
-    X.fillStyle=col; X.fillRect(mx,my,mw*k,mh);
-    // danger line at 78%
-    X.strokeStyle='#fff'; X.lineWidth=2; X.beginPath(); X.moveTo(mx+mw*0.78,my-4); X.lineTo(mx+mw*0.78,my+mh+4); X.stroke();
-    X.fillStyle='#fff'; X.font='13px Impact'; X.textAlign='center';
-    X.fillText(`CHAOS  ${Math.floor(this.chaos)}%   layers: ${this.layers}`, W/2, my-12);
-    if(this.danger && !this.collapsing){
-      const f=(Math.sin(this.t*20)+1)/2; X.fillStyle=`rgba(255,48,48,${0.2+0.3*f})`; X.fillRect(0,0,W,H);
-    }
+  draw(){
+    const k=clamp(this.chaos/100,0,1);
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,shade('#2a0a08',-.15+k*.25));g.addColorStop(1,shade('#100302',k*.2));
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    drawBaoBao(W/2,H*.52,40+this.score*3+k*26+pulseAmt*5,k);
+    for(const p of this.ps){ctx.globalAlpha=clamp(1-p.a/p.l,0,1);ctx.fillStyle=p.c;ctx.beginPath();ctx.arc(p.x,p.y,4+(1-p.a/p.l)*5,0,7);ctx.fill();}
+    ctx.globalAlpha=1;
+    // meter
+    const mw=W*.7,mx=W*.15,my=H*.13;
+    ctx.fillStyle='rgba(0,0,0,.6)';ctx.fillRect(mx-4,my-4,mw+8,26);
+    ctx.fillStyle='#000';ctx.fillRect(mx,my,mw,18);
+    ctx.fillStyle=k>.75?'#ff5a4d':k>.5?'#ffd166':'#7dff8a';ctx.fillRect(mx,my,mw*k,18);
+    ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(mx+mw*.75,my-4);ctx.lineTo(mx+mw*.75,my+22);ctx.stroke();
+    ctx.fillStyle='#fff';ctx.font='13px Impact';ctx.textAlign='center';
+    ctx.fillText(`CHAOS ${Math.floor(k*100)}%   layers: ${this.score}`,W/2,my-12);
+    ctx.font='15px Impact';ctx.fillStyle='rgba(255,255,255,.75)';
+    ctx.fillText('TAP to push the chaos — but never past the line',W/2,H*.92);
+    if(k>.75&&!this.collapsing){const f=(Math.sin(this.t*18)+1)/2;ctx.fillStyle=`rgba(255,40,40,${.15+.25*f})`;ctx.fillRect(0,0,W,H);}
+    drawHud(this,true);
+    this.floaters.draw();
   }
 }
 
-/* ============================================================================
-   SCENE 5 — POV: MAIN CHARACTER
-   FORMAT: POV scenarios → perform the matching gesture pattern IS the rule.
-   A prompt appears ("POV: you're the chosen one"). Do the right tap pattern.
-   ============================================================================ */
-const POVS = [
-  { txt:"you're the chosen one", pattern:'tap3' },
-  { txt:"you just walked in", pattern:'tap1' },
-  { txt:"the main character moment", pattern:'hold' },
-  { txt:"slow-mo entrance", pattern:'tap2' },
-  { txt:"you caught the aura", pattern:'tap3' },
-  { txt:"you fumbled it", pattern:'tap1' },
-  { txt:"the plot twist", pattern:'hold' },
-];
+/* --- 5. POV: MAIN CHARACTER : POV gesture patterns are the rule ------------ */
+const POVS=[
+  {t:"you're the chosen one",p:'tap3'},{t:'you just walked in',p:'tap1'},
+  {t:'the slow-mo entrance',p:'hold'},{t:'you caught the aura',p:'tap3'},
+  {t:'the plot twist hits',p:'hold'},{t:'main character moment',p:'tap2'}];
 class PovScene extends Scene{
-  onreset(){ this.pov=null; this.povT=0; this.window=2.6; this.taps=0; this.hold=0; this.holding=false; this.done=false; }
-  next(){ this.pov=pick(POVS); this.povT=0; this.window=Math.max(1.6,2.6-this.t*0.02); this.taps=0; this.hold=0; this.done=false; RUN.comments.fire(`POV: ${this.pov.txt}`, '#fff'); }
+  _reset(){this.pov=null;this.pt=0;this.win=3.4;this.taps=0;this.holding=false;this.holdT=0;this.won=false;}
+  next(){this.pov=pick(POVS);this.pt=0;this.win=Math.max(2,3.4-this.t*.025);this.taps=0;this.holdT=0;this.holding=false;this.won=false;}
   update(dt){
-    super.update(dt);
-    if(!this.pov){ this.next(); return; }
-    this.povT += dt;
-    if(!this.holding && this.pov.pattern==='hold') this.hold=0;
-    else this.hold += (this.holding? dt:0);
-    if(this.done) return;
-    if(this.pov.pattern==='tap1' && this.taps>=1) this.success(dt);
-    else if(this.pov.pattern==='tap2' && this.taps>=2) this.success(dt);
-    else if(this.pov.pattern==='tap3' && this.taps>=3) this.success(dt);
-    else if(this.pov.pattern==='hold' && this.hold>=0.7) this.success(dt);
-    else if(this.povT >= this.window){
-      this.lives--; RUN.combo=0; RUN.comments.fire("bro fumbled the main character moment 💀", this.flash); AUD.miss(); shake(9); this.pov=null;
+    super.update(dt);if(this.over)return;
+    if(!this.pov){this.next();return;}
+    if(this.won)return;
+    this.pt+=dt;
+    if(this.holding&&this.pov.p==='hold'){
+      this.holdT+=dt;
+      if(this.holdT>=.6){this.winIt();}
     }
+    const need=this.pov.p==='tap1'?1:this.pov.p==='tap2'?2:3;
+    if(this.pov.p!=='hold'&&this.taps>=need)this.winIt();
+    if(this.pt>=this.win){this.fault('you fumbled the main character moment 💀');if(!this.over)this.pov=null;}
   }
-  success(dt){
-    if(this.done) return; this.done=true;
-    const gain = this.povT < this.window*0.4 ? 3:1;
-    this.score+=gain; RUN.combo+=gain;
-    RUN.comments.fire(pick(["W main character","the goat arrived","based POV","you ate"]), '#ffd76a'); AUD.serve(); beat(); shake(gain>1?14:7);
+  winIt(){
+    if(this.won)return;this.won=true;
+    const fast=this.pt<this.win*.45;
+    this.good(fast?3:1,pick(['W main character','the goat arrived','based POV','you ate']),fast);
     this.pov=null;
   }
-  tap(x,y){ if(this.over||this.done||!this.pov) return; this.taps++; AUD.blip(440+this.taps*120,0.06,'square',0.16); }
-  display(){
-    // dreamy lavender/gold palette
-    const g=X.createLinearGradient(0,0,0,H);
-    g.addColorStop(0, this.bg); g.addColorStop(1, shade(this.bg,-0.25));
-    X.fillStyle=g; X.fillRect(0,0,W,H);
-    // spotlight
-    X.globalAlpha=0.18; const rg=X.createRadialGradient(W/2,H*0.5,10,W/2,H*0.5,W*0.6);
-    rg.addColorStop(0,'#fff'); rg.addColorStop(1,'rgba(255,255,255,0)'); X.fillStyle=rg; X.fillRect(0,0,W,H); X.globalAlpha=1;
-    // GERALD main character
-    drawGerald(X, W/2, H*0.55, 50+PULSE*6);
-    // prompt
+  onDown(){if(this.over||this.won||!this.pov)return;this.taps++;this.holding=true;Audio.tone(440+this.taps*110,.06,'square',.14);}
+  onUp(){this.holding=false;this.holdT=0;}
+  draw(){
+    const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#2c2158');g.addColorStop(1,'#150e2e');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    ctx.globalAlpha=.18;
+    const rg=ctx.createRadialGradient(W/2,H*.52,10,W/2,H*.52,W*.6);rg.addColorStop(0,'#ffd76a');rg.addColorStop(1,'rgba(255,215,106,0)');
+    ctx.fillStyle=rg;ctx.fillRect(0,0,W,H);ctx.globalAlpha=1;
+    drawGerald(W/2,H*.55,48+pulseAmt*6);
     if(this.pov){
-      X.fillStyle='rgba(0,0,0,0.45)'; X.fillRect(0,H*0.1,W,H*0.18);
-      X.fillStyle='#fff'; X.textAlign='center'; X.font='16px Impact'; X.fillText('POV:', W/2, H*0.13);
-      X.font='22px Impact'; X.fillStyle=shade(this.flash,-0.05);
-      const lines=wrap(this.pov.txt,20); lines.forEach((ln,i)=>X.fillText(ln, W/2, H*0.2+i*24));
-      // instruction
-      X.fillStyle='#fff'; X.font='16px Impact'; X.globalAlpha=0.7;
-      const inst = {tap1:'TAP ONCE', tap2:'TAP TWICE', tap3:'TAP 3×', hold:'HOLD'}[this.pov.pattern];
-      X.fillText(inst, W/2, H*0.92); X.globalAlpha=1;
-      // hold progress
-      if(this.pov.pattern==='hold'){ const w=W*0.5, x=W*0.25, y=H*0.82; X.fillStyle='rgba(0,0,0,0.5)'; X.fillRect(x-3,y-3,w+6,12); X.fillStyle=shade(this.flash,-0.05); X.fillRect(x,y,w*Math.min(1,this.hold/0.7),6); }
-      // timer bar
-      const tw = W*0.8*(1-this.povT/this.window); X.fillStyle='rgba(255,255,255,0.4)'; X.fillRect(W*0.1,H*0.06,W*0.8,4); X.fillStyle=shade(this.flash,-0.05); X.fillRect(W*0.1,H*0.06,tw,4);
+      ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,H*.12,W,H*.16);
+      ctx.fillStyle='#38f0ff';ctx.font='14px Impact';ctx.textAlign='center';ctx.fillText('POV:',W/2,H*.15);
+      ctx.fillStyle='#fff';ctx.font='21px Impact';
+      wrapText(this.pov.t,20).forEach((ln,i)=>ctx.fillText(ln,W/2,H*.18+i*24));
+      const inst={tap1:'TAP ONCE',tap2:'TAP TWICE',tap3:'TAP 3 TIMES',hold:'HOLD YOUR FINGER DOWN'}[this.pov.p];
+      ctx.fillStyle='#ffd76a';ctx.font='20px Impact';ctx.fillText(inst,W/2,H*.88);
+      if(this.pov.p==='hold'){
+        ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(W*.25,H*.8-3,W*.5,12);
+        ctx.fillStyle='#ffd76a';ctx.fillRect(W*.25,H*.8-3,W*.5*clamp(this.holdT/.6,0,1),6);
+      }else{
+        const need=this.pov.p==='tap1'?1:this.pov.p==='tap2'?2:3;
+        for(let i=0;i<need;i++){ctx.fillStyle=i<this.taps?'#7dff8a':'rgba(255,255,255,.25)';ctx.beginPath();ctx.arc(W/2+(i-(need-1)/2)*34,H*.82,11,0,7);ctx.fill();}
+      }
+      // timer
+      ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(W*.1,H*.07,W*.8,4);
+      ctx.fillStyle='#ffd76a';ctx.fillRect(W*.1,H*.07,W*.8*(1-this.pt/this.win),4);
     }
+    drawHud(this);
+    this.floaters.draw();
   }
 }
 
-/* ============================================================================
-   ORIGINAL CAST — drawn procedurally, no IP
-   ============================================================================ */
-function drawGoober(X, x, y, r){
-  X.save(); X.translate(x,y);
-  // body (cream blob chef)
-  X.fillStyle='#f3e4c8'; X.beginPath(); X.ellipse(0,0,r,r*0.95,0,0,7); X.fill();
-  X.strokeStyle='#caa97a'; X.lineWidth=3; X.stroke();
-  // chef hat
-  X.fillStyle='#fff'; X.beginPath(); X.ellipse(0,-r*0.85,r*0.7,r*0.45,0,0,7); X.fill();
-  X.fillRect(-r*0.55,-r*0.95,r*1.1,r*0.3);
-  // eyes
-  X.fillStyle='#3a2418'; X.beginPath(); X.arc(-r*0.3,-r*0.1,r*0.12,0,7); X.arc(r*0.3,-r*0.1,r*0.12,0,7); X.fill();
-  // little smile
-  X.strokeStyle='#3a2418'; X.lineWidth=3; X.beginPath(); X.arc(0,r*0.2,r*0.3,0.1*Math.PI,0.9*Math.PI); X.stroke();
-  X.restore();
+/* ------------------------------- cast art --------------------------------- */
+function drawGoober(x,y,r){
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle='#f3e4c8';ctx.beginPath();ctx.ellipse(0,0,r,r*.95,0,0,7);ctx.fill();
+  ctx.strokeStyle='#caa97a';ctx.lineWidth=3;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.ellipse(0,-r*.85,r*.7,r*.42,0,0,7);ctx.fill();ctx.fillRect(-r*.55,-r*.92,r*1.1,r*.28);
+  ctx.fillStyle='#3a2418';ctx.beginPath();ctx.arc(-r*.3,-r*.1,r*.12,0,7);ctx.arc(r*.3,-r*.1,r*.12,0,7);ctx.fill();
+  ctx.strokeStyle='#3a2418';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,r*.22,r*.3,.15*Math.PI,.85*Math.PI);ctx.stroke();
+  ctx.restore();
 }
-function drawSirNugget(X, x, y, r){
-  X.save(); X.translate(x,y);
-  // robot-chicken NPC, glitchy outline
-  X.fillStyle='#3a2a4a'; X.strokeStyle='#ff4adf'; X.lineWidth=3;
-  X.beginPath(); X.ellipse(0,0,r,r*1.1,0,0,7); X.fill(); X.stroke();
-  // crest
-  X.fillStyle='#ff4adf'; X.beginPath(); X.moveTo(-r*0.5,-r*0.7); X.quadraticCurveTo(0,-r*1.2,r*0.5,-r*0.7); X.fill();
-  // screen face
-  X.fillStyle='#0a0a12'; X.fillRect(-r*0.5,-r*0.3,r,r*0.5);
-  X.fillStyle='#4afff0'; X.font=`${r*0.4}px monospace`; X.textAlign='center'; X.textBaseline='middle';
-  X.fillText('>.<', 0, 0); X.textBaseline='alphabetic';
-  // glitch bars
-  X.fillStyle='rgba(74,255,240,0.3)'; for(let i=0;i<3;i++) X.fillRect(-r*0.4+Math.sin(i*3)*4, r*0.4+i*4, r*0.8, 2);
-  X.restore();
+function drawSirNugget(x,y,r){
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle='#3a2a4a';ctx.strokeStyle='#ff3df0';ctx.lineWidth=3;
+  ctx.beginPath();ctx.ellipse(0,0,r,r*1.1,0,0,7);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#ff3df0';ctx.beginPath();ctx.moveTo(-r*.5,-r*.7);ctx.quadraticCurveTo(0,-r*1.2,r*.5,-r*.7);ctx.fill();
+  ctx.fillStyle='#0a0a12';ctx.fillRect(-r*.5,-r*.3,r,r*.5);
+  ctx.fillStyle='#38f0ff';ctx.font=`${r*.42}px monospace`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('>.<',0,0);
+  ctx.textBaseline='alphabetic';ctx.restore();
 }
-function drawBaoBao(X, x, y, r, k){
-  X.save(); X.translate(x,y);
-  // dumpling that inflates — pleats on top
-  X.fillStyle = shade('#f5e6c8', k*0.2 - 0.1);
-  X.strokeStyle = shade('#c9a96a', k*0.3); X.lineWidth=3;
-  X.beginPath(); X.ellipse(0,0,r,r*0.9,0,0,7); X.fill(); X.stroke();
-  // pleats
-  X.strokeStyle=shade('#a8884a',0); X.lineWidth=2;
-  for(let i=-2;i<=2;i++){ X.beginPath(); X.moveTo(i*r*0.25,-r*0.6); X.lineTo(i*r*0.18, -r*0.95); X.stroke(); }
-  // face — gets more panicked with chaos
-  const eye = clamp(k,0,1);
-  X.fillStyle='#3a2a1a';
-  X.beginPath(); X.arc(-r*0.3,-r*0.05, r*0.12*(1+eye*0.5),0,7); X.arc(r*0.3,-r*0.05, r*0.12*(1+eye*0.5),0,7); X.fill();
-  X.strokeStyle='#3a2a1a'; X.lineWidth=3;
-  if(k>0.6){ X.beginPath(); X.arc(0,r*0.25,r*0.2,1.1*Math.PI,1.9*Math.PI); X.stroke(); } // screaming
-  else { X.beginPath(); X.arc(0,r*0.2,r*0.25,0.1*Math.PI,0.9*Math.PI); X.stroke(); }
-  X.restore();
+function drawBaoBao(x,y,r,k){
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle=shade('#f5e6c8',k*.25-.05);ctx.strokeStyle=shade('#c9a96a',k*.3);ctx.lineWidth=3;
+  ctx.beginPath();ctx.ellipse(0,0,r,r*.9,0,0,7);ctx.fill();ctx.stroke();
+  ctx.strokeStyle='#a8884a';ctx.lineWidth=2;
+  for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(i*r*.25,-r*.6);ctx.lineTo(i*r*.18,-r*.95);ctx.stroke();}
+  ctx.fillStyle='#3a2a1a';ctx.beginPath();ctx.arc(-r*.3,-r*.05,r*.12*(1+k*.5),0,7);ctx.arc(r*.3,-r*.05,r*.12*(1+k*.5),0,7);ctx.fill();
+  ctx.strokeStyle='#3a2a1a';ctx.lineWidth=3;
+  if(k>.6){ctx.beginPath();ctx.arc(0,r*.25,r*.2,1.1*Math.PI,1.9*Math.PI);ctx.stroke();}
+  else{ctx.beginPath();ctx.arc(0,r*.2,r*.25,.1*Math.PI,.9*Math.PI);ctx.stroke();}
+  ctx.restore();
 }
-function drawGerald(X, x, y, r){
-  X.save(); X.translate(x,y);
-  // loaf of bread that thinks he's the main character — golden glow
-  X.shadowColor='#ffd76a'; X.shadowBlur=24;
-  X.fillStyle='#e8b865'; X.strokeStyle='#a8742a'; X.lineWidth=3;
-  X.beginPath(); X.moveTo(-r,-r*0.5); X.quadraticCurveTo(0,-r*1.1,r,-r*0.5); X.lineTo(r,r*0.6); X.quadraticCurveTo(0,r*0.9,-r,r*0.6); X.closePath(); X.fill(); X.stroke();
-  X.shadowBlur=0;
-  // score cuts
-  X.strokeStyle='#a8742a'; X.lineWidth=2; X.beginPath(); X.moveTo(-r*0.6,-r*0.2); X.lineTo(r*0.6,-r*0.1); X.stroke();
-  // sunglasses (main character)
-  X.fillStyle='#1a1a1a'; X.fillRect(-r*0.6,-r*0.4,r*0.4,r*0.25); X.fillRect(r*0.2,-r*0.4,r*0.4,r*0.25);
-  X.strokeStyle='#1a1a1a'; X.lineWidth=2; X.beginPath(); X.moveTo(-r*0.2,-r*0.28); X.lineTo(r*0.2,-r*0.28); X.stroke();
-  // smug smile
-  X.strokeStyle='#1a1a1a'; X.lineWidth=3; X.beginPath(); X.arc(0,r*0.25,r*0.2,0.1*Math.PI,0.9*Math.PI); X.stroke();
-  X.restore();
-}
-function drawAbsurd(X, x, y, r, emoji){
-  // a procedural absurd doodle per event — just a chaotic little scene
-  X.save(); X.translate(x,y);
-  X.strokeStyle='#fff'; X.lineWidth=3; X.fillStyle=emoji;
-  // stick figure doing something silly
-  X.beginPath(); X.arc(0,-r*0.4,r*0.2,0,7); X.stroke();
-  X.beginPath(); X.moveTo(0,-r*0.2); X.lineTo(0,r*0.4); X.moveTo(-r*0.4,r*0.1); X.lineTo(r*0.4,r*0.1); X.moveTo(0,r*0.4); X.lineTo(-r*0.3,r*0.8); X.moveTo(0,r*0.4); X.lineTo(r*0.3,r*0.8); X.stroke();
-  // floating emoji
-  X.font=`${r*0.6}px Impact`; X.textAlign='center'; X.textBaseline='middle'; X.fillText(emoji, r*0.6, -r*0.6); X.textBaseline='alphabetic';
-  X.restore();
+function drawGerald(x,y,r){
+  ctx.save();ctx.translate(x,y);
+  ctx.shadowColor='#ffd76a';ctx.shadowBlur=22;
+  ctx.fillStyle='#e8b865';ctx.strokeStyle='#a8742a';ctx.lineWidth=3;
+  ctx.beginPath();ctx.moveTo(-r,-r*.5);ctx.quadraticCurveTo(0,-r*1.1,r,-r*.5);ctx.lineTo(r,r*.6);ctx.quadraticCurveTo(0,r*.9,-r,r*.6);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.shadowBlur=0;
+  ctx.strokeStyle='#a8742a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-r*.6,-r*.2);ctx.lineTo(r*.6,-r*.1);ctx.stroke();
+  ctx.fillStyle='#1a1a1a';ctx.fillRect(-r*.62,-r*.42,r*.42,r*.26);ctx.fillRect(r*.2,-r*.42,r*.42,r*.26);
+  ctx.strokeStyle='#1a1a1a';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-r*.2,-r*.29);ctx.lineTo(r*.2,-r*.29);ctx.stroke();
+  ctx.beginPath();ctx.arc(0,r*.28,r*.2,.1*Math.PI,.9*Math.PI);ctx.stroke();
+  ctx.restore();
 }
 
-/* ============================================================================
-   SCENE CONFIGS — each scene a viral FORMAT with unique palette
-   ============================================================================ */
-const SCENES = [
-  { id:'cook', name:'LET GOOBER COOK', tag:'"let him cook" → patience is the rule',
-    bg:'#3a1e10', flash:'#ffaa3a', cls:CookScene,
-    vibes:[], maxLives:3 },
-  { id:'npc', name:'NPC FARM', tag:'NPC catchphrase spam → match the vibe',
-    bg:'#1a0a2a', flash:'#ff4adf', cls:NpcScene,
-    vibes:[{sym:'🔥',color:'#ff6a4d'},{sym:'💀',color:'#e0e0e0'},{sym:'🤡',color:'#ffd966'},{sym:'🗿',color:'#b0b0b0'},{sym:'😭',color:'#9fd0ff'}], maxLives:3 },
-  { id:'react', name:'REACTION ROULETTE', tag:'comment culture → match the emoji',
-    bg:'#070710', flash:'#7affc0', cls:ReactScene, vibes:[], maxLives:3 },
-  { id:'esc', name:'ESCALATION STATION', tag:'"it gets worse" → push the chaos',
-    bg:'#2a0a0a', flash:'#ff5a1a', cls:EscScene, vibes:[], maxLives:3 },
-  { id:'pov', name:'POV: MAIN CHARACTER', tag:'POV format → do the gesture',
-    bg:'#2a1e4a', flash:'#ffd76a', cls:PovScene, vibes:[], maxLives:3 },
+/* --------------------------------- HUD ------------------------------------ */
+function drawHud(s,hideLives){
+  ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(0,0,W,H*.055);
+  ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='17px Impact';
+  ctx.fillText('SCORE '+s.score,10,H*.038);
+  ctx.textAlign='right';ctx.fillText('COMBO x'+s.combo,W-10,H*.038);
+  if(!hideLives){
+    ctx.textAlign='center';
+    for(let i=0;i<3;i++){ctx.fillStyle=i<s.lives?'#ff3df0':'rgba(255,255,255,.2)';ctx.font='17px Impact';ctx.fillText('♥',W/2-24+i*24,H*.042);}
+  }
+}
+
+/* ------------------------------ scene config ------------------------------ */
+const SCENES=[
+  {id:'cook',name:'LET GOOBER COOK',icon:'🍳',tag:'let him cook → patience is the rule',flash:'#ffb347',cls:CookScene},
+  {id:'vibe',name:'NPC FARM',icon:'🤖',tag:'catchphrase spam → tap cards matching the vibe',flash:'#ff3df0',cls:VibeScene},
+  {id:'react',name:'REACTION ROULETTE',icon:'💀',tag:'comment culture → tap the right emoji',flash:'#ff3df0',cls:ReactScene},
+  {id:'esc',name:'ESCALATION STATION',icon:'🥟',tag:'it gets worse → push the chaos, not past the line',flash:'#ff5a4d',cls:EscScene},
+  {id:'pov',name:'POV: MAIN CHARACTER',icon:'🍞',tag:'POV format → do the gesture',flash:'#ffd76a',cls:PovScene}
 ];
 
-// build scene instances lazily with config injected
-function makeScene(id){
-  const cfg = SCENES.find(s=>s.id===id);
-  const s = new cfg.cls(cfg);
-  if(cfg.vibes && cfg.vibes.length) s.vibes = cfg.vibes;
-  return s;
+/* ------------------------------ screen routing ---------------------------- */
+function showScreen(name){
+  titleScreen.classList.toggle('hidden',name!=='title');
+  selectScreen.classList.toggle('hidden',name!=='select');
+  resultScreen.classList.toggle('hidden',name!=='result');
 }
 
-/* ============================================================================
-   RUN — one playthrough. Setup → Escalation → Chaos → Punchline.
-   ============================================================================ */
-const RUN = {
-  active:false, sceneId:null, scene:null,
-  score:0, combo:0, lives:0, maxLives:3, start:0,
-  comments:new Comments(),
-  phase:'setup', // setup/escalation/chaos/punchline (visual feedback only)
-  reset(sid){
-    this.sceneId=sid; this.scene=makeScene(sid);
-    this.score=0; this.combo=0; this.lives=this.scene.maxLives; this.maxLives=this.scene.maxLives;
-    this.start=performance.now()/1000; this.phase='setup'; this.comments.items.length=0;
-    this.scene.reset(this);
-    this.active=true;
-    setTheme(SCENES.find(s=>s.id===sid).bg);
-  },
-  end(){ this.active=false; }
-};
+function buildSceneList(){
+  SCENES.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.className='scene-btn';
+    b.innerHTML=`<span class="ic">${s.icon}</span><span class="nm">${s.name}<span class="tg">${s.tag}</span></span><span class="go">▶</span>`;
+    b.addEventListener('click',()=>Game.startCountdown(i));
+    sceneList.appendChild(b);
+  });
+}
 
-/* ============================================================================
-   GAME LOOP
-   ============================================================================ */
-const GAME = {
-  state:'title', // title|select|countdown|play|result
-  selIdx:0, countT:0, resultT:0,
-  last:0,
-  init(){
+/* --------------------------------- game ----------------------------------- */
+const Game={
+  state:'title', idx:0, countT:0, scene:null,
+  start(){
     resize();
-    this.last=performance.now();
+    buildSceneList();
+    showScreen('title');
     requestAnimationFrame(t=>this.loop(t));
-    // input
-    const tap=(e)=>{
-      // never steal clicks from the mute button
-      if(e.target && e.target.closest && e.target.closest('#mute')) return;
-      e.preventDefault();
-      AUD.init(); AUD.resume();
-      const r=C.getBoundingClientRect();
-      const tch = e.touches? e.touches[0] : e;
-      const x=(tch.clientX-r.left), y=(tch.clientY-r.top);
-      this.handleTap(x,y);
-    };
-    // listen on the whole stage so clicks in the black margins (desktop) also
-    // respond. Use 'click' (not 'mousedown') so synthetic .click() calls and
-    // real mouse taps both fire; touchstart handles mobile with preventDefault
-    // which suppresses the duplicated synthetic click afterwards.
-    const host = document.getElementById('stage');
-    host.addEventListener('touchstart', tap, {passive:false});
-    host.addEventListener('click', tap);
-    window.addEventListener('keydown', e=>{
-      if(e.code==='Space'){ e.preventDefault(); this.handleTap(W/2,H/2); }
-      if(e.code==='ArrowLeft'){ if(this.state==='select') this.selIdx=(this.selIdx+SCENES.length-1)%SCENES.length; }
-      if(e.code==='ArrowRight'){ if(this.state==='select') this.selIdx=(this.selIdx+1)%SCENES.length; }
-    });
-  },
-  handleTap(x,y){
-    if(this.state==='title'){
-      // START GAME button — or any tap on the title screen enters the feed
-      this.state='select'; return;
-    }
-    if(this.state==='select'){
-      // scene chip hit (vertical check fixed — the old `const y` shadowed the
-      // tap y, making Math.abs(y-y) always 0 so chips only responded by x)
-      const n=SCENES.length, w=Math.min(W/n, 96), total=w*n, x0=(W-total)/2, chipY=H-90;
-      for(let i=0;i<n;i++){ const cx=x0+i*w+w/2; if(Math.abs(x-cx)<w/2 && Math.abs(y-chipY)<30){ this.startCountdown(i); return; } }
-      // big preview card = PLAY button
-      this.startCountdown(this.selIdx); return;
-    }
-    if(this.state==='play' && RUN.active){
-      RUN.scene.tap(x,y);
-    }
-    if(this.state==='result' && this.resultT>0.8){ this.state='select'; }
   },
   startCountdown(i){
-    this.selIdx=i; this.state='countdown'; this.countT=0; setTheme(SCENES[i].bg);
-    AUD.init(); AUD.resume(); AUD.startLoop(b=>{ beat(); });
+    this.idx=i;this.state='countdown';this.countT=0;
+    showScreen(null);
+    quitBtn.style.display='block';
+    setTheme(SCENES[i].flash);
+    Audio.init();Audio.resume();Audio.startBeat();
   },
   beginPlay(){
-    this.state='play'; RUN.reset(SCENES[this.selIdx].id);
+    const cfg=SCENES[this.idx];
+    this.scene=new cfg.cls(cfg);
+    this.scene.reset();
+    this.state='play';
   },
+  finish(){
+    this.state='result';
+    quitBtn.style.display='none';
+    Audio.stopBeat();Audio.win();
+    const s=this.scene,cfg=SCENES[this.idx],key='brainrotTV2_'+cfg.id;
+    const prev=+(localStorage.getItem(key)||0),isNew=s.score>prev;
+    if(isNew)localStorage.setItem(key,String(s.score));
+    const tier=this.tier(s.score);
+    rTier.textContent=tier.name;rTier.style.color=cfg.flash;
+    rLine.textContent=tier.line;
+    rScore.textContent=s.score;
+    rBest.textContent=isNew?'first run — go again':'best: '+Math.max(prev,s.score);
+    rNew.classList.toggle('hidden',!isNew);
+    rComment.textContent='"'+pick(REACTS)+'"';
+    showScreen('result');
+    setTheme('#0b0714');
+  },
+  tier(v){
+    const T=[{m:0,n:'CRINGE',l:'bro fumbled the whole feed'},{m:5,n:'MID',l:'watchable. barely.'},
+      {m:10,n:'UNCANNY',l:'something is off'},{m:18,n:'BASED',l:'the comment section approves'},
+      {m:28,n:'SIGMA',l:'aura restored'},{m:42,n:'GIGACHAD',l:'he cooked. he ate. no crumbs left.'},
+      {m:60,n:'MAXIMUM GOOB',l:'touch grass challenge: FAILED forever 💀'}];
+    let r=T[0];for(const t of T)if(v>=t.m)r=t;return{name:r.n,line:r.l};
+  },
+  last:0,
   loop(t){
-    const now=t/1000; let dt=now-this.last; this.last=now; if(dt>0.1)dt=0.1;
-    this.update(dt); this.draw();
-    requestAnimationFrame(tt=>this.loop(tt));
-  },
-  update(dt){
-    PULSE=Math.max(0,PULSE-dt*4);
-    SHAKE=Math.max(0,SHAKE-dt*60);
-    RUN.comments.update(dt);
+    const now=t/1000;let dt=now-this.last;this.last=now;if(dt>.1)dt=.1;
+    shakeAmt=Math.max(0,shakeAmt-dt*55);
+    pulseAmt=Math.max(0,pulseAmt-dt*3.5);
+    ctx.save();
+    if(shakeAmt>0)ctx.translate(rand(-shakeAmt,shakeAmt),rand(-shakeAmt,shakeAmt));
+    if(this.state==='countdown')this.drawCountdown(dt);
+    else if(this.state==='play'){
+      this.scene.update(dt);
+      this.scene.draw();
+      if(this.scene.over){this.finish();}
+    }else{
+      // menu backdrop: animated gradient on canvas
+      ctx.fillStyle='#0b0714';ctx.fillRect(-20,-20,W+40,H+40);
+      const tt=performance.now()/1000;
+      ctx.globalAlpha=.12;
+      for(let i=0;i<8;i++){
+        ctx.fillStyle=['#ff3df0','#38f0ff','#ffd166'][i%3];
+        ctx.beginPath();ctx.arc(W/2+Math.sin(tt*.5+i)*W*.4,H*.3+Math.cos(tt*.4+i*1.3)*H*.25,40+i*10,0,7);ctx.fill();
+      }
+      ctx.globalAlpha=1;
+    }
+    ctx.restore();
     if(this.state==='countdown'){
       this.countT+=dt;
-      if(this.countT>3.2) this.beginPlay();
+      if(this.countT>3.1)this.beginPlay();
     }
-    if(this.state==='play'){
-      RUN.scene.update(dt);
-      // phase progression — visual chaos ramps
-      const e=(performance.now()/1000-RUN.start);
-      if(e>5 && RUN.phase==='setup') RUN.phase='escalation';
-      if(e>12 && RUN.phase==='escalation') RUN.phase='chaos';
-      if(RUN.scene.over){
-        this.state='result'; this.resultT=0; RUN.end(); AUD.stopLoop();
-        // best score
-        const key='brainrotTV_'+RUN.sceneId;
-        const prev=+(localStorage.getItem(key)||0);
-        const isNew=RUN.scene.score>prev;
-        if(isNew) localStorage.setItem(key, RUN.scene.score);
-        this._lastNew=isNew; this._lastKey=key;
-        AUD.win();
-      }
-    }
-    if(this.state==='result') this.resultT+=dt;
+    requestAnimationFrame(tt=>this.loop(tt));
   },
-  draw(){
-    X.save();
-    if(SHAKE>0){ X.translate(rnd(-SHAKE,SHAKE), rnd(-SHAKE,SHAKE)); }
-    X.fillStyle='#000'; X.fillRect(0,0,W,H);
-    if(this.state==='title') this.drawTitle();
-    else if(this.state==='select') this.drawSelect();
-    else if(this.state==='countdown') this.drawCountdown();
-    else if(this.state==='play'){ this.drawPlay(); }
-    else if(this.state==='result') this.drawResult();
-    RUN.comments.draw(X);
-    X.restore();
-  },
-  /* ---------- TITLE ---------- */
-  drawTitle(){
-    setTheme('#0a0a12');
-    const g=X.createLinearGradient(0,0,0,H);
-    g.addColorStop(0,'#1a0a2a'); g.addColorStop(1,'#0a0a12');
-    X.fillStyle=g; X.fillRect(0,0,W,H);
-    // floating meme glyphs
-    const glyphs=['💀','🔥','🗿','🤡','😭','💀'];
-    X.globalAlpha=0.15;
-    for(let i=0;i<10;i++){ const y=(i*H/6 + this.t0()*30)%H; X.font=`${40+i*8}px Impact`; X.textAlign='center'; X.fillText(glyphs[i%glyphs.length], (i*97)%W, y); }
-    X.globalAlpha=1;
-    // title
-    X.textAlign='center';
-    const pulse=1+PULSE*0.05;
-    X.font=`${Math.floor(64*pulse)}px Impact`;
-    X.lineWidth=8; X.strokeStyle='#000';
-    const title='BRAINROT.TV';
-    X.strokeText(title, W/2, H*0.32); X.fillStyle='#ff4adf'; X.fillText(title, W/2, H*0.32);
-    X.font='20px Impact'; X.fillStyle='#4afff0';
-    X.fillText('a playable tiktok feed', W/2, H*0.32+44);
-    X.font='14px Impact'; X.fillStyle='#888';
-    const sub='every scene\'s mechanic IS a viral format. remove the meme, the game breaks.';
-    wrap(sub, 42).forEach((ln,i)=> X.fillText(ln, W/2, H*0.5+i*20));
-    // cast preview
-    const chars=[
-      {f:drawGoober,x:W*0.2,y:H*0.72,c:'#f3e4c8',n:'GOOBER'},
-      {f:drawSirNugget,x:W*0.4,y:H*0.72,c:'#ff4adf',n:'SIR NUGGET'},
-      {f:drawBaoBao2,x:W*0.6,y:H*0.72,c:'#e8b865',n:'BAO BAO'},
-      {f:drawGerald,x:W*0.8,y:H*0.72,c:'#ffd76a',n:'GERALD'},
-    ];
-    chars.forEach(ch=>{ ch.f(X, ch.x, ch.y, 30+PULSE*4, 0.2); X.fillStyle=ch.c; X.font='12px Impact'; X.fillText(ch.n, ch.x, ch.y+50); });
-    // START GAME button (the whole screen is also tappable — forgiving)
-    const bw=W*0.64, bh=60, bx=(W-bw)/2, by=H*0.84;
-    this._startBtn={x:bx,y:by,w:bw,h:bh};
-    const pa=(Math.sin(this.t0()*3)+1)/2;
-    X.save();
-    X.shadowColor='#ff4adf'; X.shadowBlur=18+pa*22;
-    X.fillStyle='#ff4adf'; roundRect(bx,by,bw,bh,16); X.fill();
-    X.restore();
-    X.strokeStyle='#fff'; X.lineWidth=3; roundRect(bx,by,bw,bh,16); X.stroke();
-    X.fillStyle='#fff'; X.font='30px Impact'; X.textAlign='center'; X.textBaseline='middle';
-    X.fillText('START GAME', W/2, by+bh/2+2);
-    X.textBaseline='alphabetic';
-    X.font='12px Impact'; X.fillStyle='#888';
-    X.fillText('tap anywhere to enter the feed', W/2, by+bh+22);
-  },
-  t0(){ return performance.now()/1000; },
-  /* ---------- SELECT ---------- */
-  drawSelect(){
-    setTheme('#0a0a12');
-    X.fillStyle='#0a0a12'; X.fillRect(0,0,W,H);
-    X.textAlign='center'; X.fillStyle='#fff';
-    X.font='32px Impact'; X.fillText('PICK A VIRAL FORMAT', W/2, H*0.1);
-    X.font='13px Impact'; X.fillStyle='#888';
-    X.fillText('each one = a different tiktok meme as the rule', W/2, H*0.1+26);
-    // big preview card
-    const s=SCENES[this.selIdx];
-    const cw=W*0.8, ch=H*0.5, cx=(W-cw)/2, cy=H*0.16;
-    X.fillStyle=s.bg; roundRect(cx,cy,cw,ch,16); X.fill();
-    X.strokeStyle=s.flash; X.lineWidth=3; roundRect(cx,cy,cw,ch,16); X.stroke();
-    // preview doodle
-    X.save(); X.translate(W/2, cy+ch*0.5);
-    const ph={cook:()=>drawGoober(X,0,-10,40), npc:()=>drawSirNugget(X,0,-10,40), react:()=>{X.font='60px Impact';X.fillStyle=s.flash;X.textAlign='center';X.textBaseline='middle';X.fillText('💀',0,-10);X.textBaseline='alphabetic';}, esc:()=>drawBaoBao2(X,0,-10,40,0.3), pov:()=>drawGerald(X,0,-10,44)};
-    (ph[s.id]||(()=>{}))();
-    X.restore();
-    X.fillStyle='#fff'; X.font='26px Impact'; X.fillText(s.name, W/2, cy+ch-50);
-    X.fillStyle=s.flash; X.font='13px Impact'; wrap(s.tag, 36).forEach((ln,i)=>X.fillText(ln, W/2, cy+ch-26+i*16));
-    // pulsing PLAY affordance — makes the card read as a button
-    const pp=(Math.sin(this.t0()*4)+1)/2;
-    X.globalAlpha=0.55+0.45*pp; X.fillStyle=s.flash; X.font='18px Impact';
-    X.fillText('▶ TAP TO PLAY', W/2, cy+ch*0.72); X.globalAlpha=1;
-    // chips
-    const n=SCENES.length, w=Math.min(W/n, 96), total=w*n, x0=(W-total)/2, y=H-90;
-    for(let i=0;i<n;i++){ const cx=x0+i*w+w/2; const sel=i===this.selIdx;
-      X.fillStyle=sel? SCENES[i].flash : 'rgba(255,255,255,0.1)';
-      roundRect(cx-w/2+3, y-16, w-6, 32, 8); X.fill();
-      X.fillStyle=sel? '#000':'#fff'; X.font='10px Impact'; X.textAlign='center'; X.fillText(SCENES[i].id.toUpperCase(), cx, y+3);
-      // best score
-      const key='brainrotTV_'+SCENES[i].id; const b=+(localStorage.getItem(key)||0);
-      if(b){ X.fillStyle=sel?'#000':'#888'; X.font='9px Impact'; X.fillText('best '+b, cx, y+24); }
-    }
-    X.fillStyle='#888'; X.font='12px Impact'; X.textAlign='center';
-    X.fillText('◀ swipe chips with arrows · tap to play ▶', W/2, H-30);
-  },
-  /* ---------- COUNTDOWN ---------- */
   drawCountdown(){
-    const s=SCENES[this.selIdx];
-    X.fillStyle=s.bg; X.fillRect(0,0,W,H);
-    X.fillStyle='rgba(0,0,0,0.4)'; X.fillRect(0,0,W,H);
-    X.fillStyle='#fff'; X.textAlign='center'; X.font='18px Impact'; X.fillText(s.name, W/2, H*0.4);
-    const n = 3-Math.floor(this.countT);
-    const k=(this.countT)%1;
+    const cfg=SCENES[this.idx];
+    ctx.fillStyle='#0b0714';ctx.fillRect(-20,-20,W+40,H+40);
+    ctx.textAlign='center';
+    ctx.fillStyle=cfg.flash;ctx.font='26px Impact';ctx.fillText(cfg.name,W/2,H*.3);
+    ctx.fillStyle='#b8a9d9';ctx.font='14px Impact';
+    wrapText(cfg.tag,38).forEach((ln,i)=>ctx.fillText(ln,W/2,H*.35+22+i*20));
+    // how-to per mode
+    const how={cook:'do NOT tap while cooking · tap when it flashes SERVE',
+      vibe:'tap only the cards whose emoji matches the top vibe',
+      react:'tap the emoji at the bottom that matches the POV',
+      esc:'tap anywhere to add chaos · survive as long as you can',
+      pov:'tap 1×/2×/3× or HOLD, exactly like the card says'};
+    ctx.fillStyle='#fff';ctx.font='13px Impact';
+    wrapText(how[cfg.id],40).forEach((ln,i)=>ctx.fillText(ln,W/2,H*.52+i*20));
+    const n=3-Math.floor(this.countT),k=this.countT%1;
     if(n>=1){
-      X.font=`${60+ (1-k)*40}px Impact`; X.fillStyle=s.flash;
-      X.strokeStyle='#000'; X.lineWidth=6; X.strokeText(n, W/2, H*0.55); X.fillText(n, W/2, H*0.55);
-    } else {
-      X.font=`${50+PULSE*20}px Impact`; X.fillStyle='#fff';
-      X.strokeText('GO!', W/2, H*0.55); X.fillText('GO!', W/2, H*0.55);
+      ctx.font=`${60+(1-k)*36}px Impact`;ctx.fillStyle='#fff';
+      ctx.strokeStyle='#000';ctx.lineWidth=6;ctx.strokeText(n,W/2,H*.75);ctx.fillText(n,W/2,H*.75);
+    }else{
+      ctx.font=`${46+pulseAmt*24}px Impact`;ctx.fillStyle=cfg.flash;
+      ctx.strokeStyle='#000';ctx.lineWidth=6;ctx.strokeText('GO!',W/2,H*.75);ctx.fillText('GO!',W/2,H*.75);
     }
-  },
-  /* ---------- PLAY ---------- */
-  drawPlay(){
-    RUN.scene.display();
-    this.drawHUD();
-  },
-  drawHUD(){
-    const s=RUN.scene;
-    X.fillStyle='rgba(0,0,0,0.35)'; X.fillRect(0,0,W,H*0.06);
-    X.fillStyle='#fff'; X.textAlign='left'; X.font='18px Impact';
-    X.fillText(`SCORE ${s.score}`, 10, H*0.045);
-    X.textAlign='right';
-    X.fillText(`COMBO x${RUN.combo}`, W-10, H*0.045);
-    // lives
-    X.textAlign='center';
-    let lx = W/2 - (RUN.maxLives-1)*12;
-    for(let i=0;i<RUN.maxLives;i++){ X.fillStyle=i<RUN.lives? '#ff4adf':'rgba(255,255,255,0.2)'; X.font='18px Impact'; X.fillText('♥', lx+i*24, H*0.05); }
-    // phase badge
-    X.font='10px Impact'; X.fillStyle='#888';
-    const ph={setup:'SETUP',escalation:'ESCALATION',chaos:'CHAOS 💀'}[RUN.phase];
-    X.fillText(ph, W/2, H*0.075);
-  },
-  /* ---------- RESULT ---------- */
-  drawResult(){
-    const s=RUN.scene; const cfg=SCENES.find(z=>z.id===RUN.sceneId);
-    X.fillStyle=cfg.bg; X.fillRect(0,0,W,H);
-    X.fillStyle='rgba(0,0,0,0.55)'; X.fillRect(0,0,W,H);
-    X.textAlign='center';
-    X.fillStyle='#fff'; X.font='14px Impact'; X.fillText('— the feed moved on —', W/2, H*0.14);
-    X.font='44px Impact'; X.fillStyle=cfg.flash; X.strokeStyle='#000'; X.lineWidth=6;
-    const tier = this.tier(s.score);
-    X.strokeText(tier.name, W/2, H*0.26); X.fillText(tier.name, W/2, H*0.26);
-    X.fillStyle='#fff'; X.font='13px Impact'; wrap(tier.line, 34).forEach((ln,i)=>X.fillText(ln, W/2, H*0.3+i*18));
-    X.font='64px Impact'; X.fillStyle='#fff'; X.strokeStyle=cfg.flash; X.lineWidth=5;
-    X.strokeText(s.score, W/2, H*0.5); X.fillText(s.score, W/2, H*0.5);
-    X.font='14px Impact'; X.fillStyle='#888'; X.fillText('points', W/2, H*0.56);
-    if(this._lastNew){ const a=(Math.sin(this.t0()*6)+1)/2; X.fillStyle=`rgba(255,215,106,${0.5+0.5*a})`; X.font='22px Impact'; X.fillText('NEW BEST 🔥', W/2, H*0.64); }
-    else { const b=+(localStorage.getItem(this._lastKey)||0); X.fillStyle='#888'; X.font='14px Impact'; X.fillText(`best: ${b}`, W/2, H*0.64); }
-    X.fillStyle='#fff'; X.font='13px Impact';
-    X.fillText(`"${pick(REACT_BRO)}"`, W/2, H*0.74);
-    X.fillStyle='rgba(255,255,255,0.6)'; X.font='16px Impact';
-    X.fillText('tap to pick another format', W/2, H*0.9);
-  },
-  tier(score){
-    const T=[
-      {min:0,name:'CRINGE',line:'bro fumbled the whole feed'},
-      {min:5,name:'MID',line:'watchable. barely.'},
-      {min:10,name:'UNCANNY',line:'something is off'},
-      {min:18,name:'BASED',line:'the comment section approves'},
-      {min:28,name:'SIGMA',line:'aura restored'},
-      {min:40,name:'GIGACHAD',line:'he cooked. he ate. he left no crumbs.'},
-      {min:60,name:'MAXIMUM GOOB',line:'touch grass challenge: FAILED permanently 💀'},
-    ];
-    let r=T[0]; for(const t of T) if(score>=t.min) r=t; return r;
   }
 };
-function roundRect(x,y,w,h,r){ X.beginPath(); X.moveTo(x+r,y); X.arcTo(x+w,y,x+w,y+h,r); X.arcTo(x+w,y+h,x,y+h,r); X.arcTo(x,y+h,x,y,r); X.arcTo(x,y,x+w,y,r); X.closePath(); }
-// alias to keep BaoBao draw signature consistent (k optional)
-function drawBaoBao2(X,x,y,r,k=0){ drawBaoBao(X,x,y,r,k); }
 
-GAME.init();
+/* --------------------------- gameplay input ------------------------------- */
+function canvasPoint(e){
+  const r=canvas.getBoundingClientRect();
+  return {x:clamp(e.clientX-r.left,0,W), y:clamp(e.clientY-r.top,0,H)};
+}
+canvas.addEventListener('pointerdown',e=>{
+  if(Game.state!=='play'||!Game.scene)return;
+  e.preventDefault();
+  Audio.resume();
+  const p=canvasPoint(e);
+  Game.scene.onDown(p.x,p.y);
+});
+window.addEventListener('pointerup',()=>{ if(Game.state==='play'&&Game.scene)Game.scene.onUp(); });
+window.addEventListener('pointercancel',()=>{ if(Game.state==='play'&&Game.scene)Game.scene.onUp(); });
+window.addEventListener('keydown',e=>{
+  if(e.code==='Space'){
+    e.preventDefault();
+    if(Game.state==='play'&&Game.scene){Game.scene.onDown(W/2,H*.6);setTimeout(()=>Game.scene.onUp(),700);}
+  }
+});
+
+/* ------------------------------ DOM wiring -------------------------------- */
+document.getElementById('startBtn').addEventListener('click',()=>{
+  Audio.init();Audio.resume();
+  showScreen('select');
+});
+document.getElementById('againBtn').addEventListener('click',()=>Game.startCountdown(Game.idx));
+document.getElementById('modesBtn').addEventListener('click',()=>{setTheme('#0b0714');showScreen('select');});
+quitBtn.addEventListener('click',e=>{
+  e.stopPropagation();
+  Audio.stopBeat();
+  Game.state='select';
+  quitBtn.style.display='none';
+  setTheme('#0b0714');
+  showScreen('select');
+});
+
+// boot — resize needs the layout to be settled
+requestAnimationFrame(()=>{ resize(); Game.start(); });
 </script>
 </body>
 </html>
