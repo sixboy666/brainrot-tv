@@ -771,7 +771,8 @@ quitBtn.addEventListener('click',e=>{
   showScreen('select');
 });
 
-// boot — resize needs the layout to be settled
+// debug hook + boot (resize needs the layout to be settled)
+window.GAME=Game;
 requestAnimationFrame(()=>{ resize(); Game.start(); });
 </script>
 </body>
