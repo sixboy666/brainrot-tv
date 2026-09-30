@@ -176,6 +176,9 @@ function shade(hex,amt){const c=parseInt(hex.slice(1),16);let r=(c>>16)&255,g=(c
 function rgba(hex,a){const c=parseInt(hex.slice(1),16);return`rgba(${(c>>16)&255},${(c>>8)&255},${c&255},${a})`;}
 function roundRect(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
 function setTheme(h){const m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',h);}
+// localStorage can throw in private mode or under file:// — never let that break a screen
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
 
 /* ========== audio: 2-bus chiptune engine + brainrot SFX ====================
    - master → (musicBus, sfxBus): mute just ramps master, scheduler keeps running
@@ -267,13 +270,14 @@ const Audio = {
     }
   },
   playStep(s,t,spb){
-    if(this.muted)return;
     const c=this.cfg,hype=this.hype;
+    // visual beat callback fires even when muted — muting silences sound, not animation
+    if(s%4===0&&this.onBeat)setTimeout(()=>this.onBeat(),Math.max(0,(t-this.ac.currentTime)*1000));
+    if(this.muted)return;
     // drums — four-on-the-floor kick, snare on the 4 of each half, hats on offbeats
     if(s%4===0){ // kick
       this.osc(t,150,.15,'sine',.5,this.musicBus,46);
       this.noiseAt(t,.02,.12,'highpass',2500,.8,this.musicBus);
-      if(this.onBeat)setTimeout(()=>this.onBeat(),Math.max(0,(t-this.ac.currentTime)*1000));
     }
     if(s%8===4){ // snare/clap
       this.noiseAt(t,.14,.16,'bandpass',1900,1.1,this.musicBus);
@@ -524,7 +528,7 @@ class Scene{
     this.floaters.add(msg,this.flash,true);
     this.bursts.burst(W/2,H*.45,['💥','💀'],8);
     Audio.bad();addShake(11);flashAmt=.35;flashColor='255,40,40';
-    if(this.lives===1){setTimeout(()=>{if(!this.over&&Game.scene===this)FB.callout('BRO ON HIS LAST LIFE 💀','the comment section is watching','#ff5a4d');},350);}
+    if(this.lives===1){setTimeout(()=>{if(!this.over&&Game.state==='play'&&Game.scene===this)FB.callout('BRO ON HIS LAST LIFE 💀','the comment section is watching','#ff5a4d');},350);}
     if(this.lives<=0){this.over=true;Audio.die();this.setMood('dead',3000);}
     else this.setMood('shock',850);
   }
@@ -858,10 +862,10 @@ class PovScene extends Scene{
     this.pt+=dt;
     if(this.holding&&this.pov.p==='hold'){
       this.holdT+=dt;
-      if(this.holdT>=.6){this.winIt();}
+      if(this.holdT>=.6){this.winIt();return;} // winIt nulls this.pov — must not fall through
     }
     const need=this.pov.p==='tap1'?1:this.pov.p==='tap2'?2:3;
-    if(this.pov.p!=='hold'&&this.taps>=need)this.winIt();
+    if(this.pov.p!=='hold'&&this.taps>=need){this.winIt();return;}
     if(this.pt>=this.win){this.fault('you fumbled the main character moment 💀');if(!this.over)this.pov=null;}
   }
   winIt(){
@@ -1333,8 +1337,8 @@ const Game={
     buffEl.classList.remove('on');calloutEl.classList.remove('show');FB.q.length=0;FB.busy=false;
     Audio.setHype(false);Audio.setMode('result');Audio.win();
     const s=this.scene,cfg=SCENES[this.idx],key='brainrotTV2_'+cfg.id;
-    const prev=+(localStorage.getItem(key)||0),isNew=s.score>prev;
-    if(isNew)localStorage.setItem(key,String(s.score));
+    const prev=+(lsGet(key)||0),isNew=s.score>prev;
+    if(isNew)lsSet(key,String(s.score));
     const best=Math.max(prev,s.score);
     const tier=this.tier(s.score);
     rTier.textContent=tier.name;rTier.style.color=cfg.flash;
@@ -1365,6 +1369,9 @@ const Game={
   },
   last:0,
   loop(t){
+    // schedule the next frame FIRST — a thrown error in update/draw must never
+    // be able to permanently freeze the game (the rAF chain survives any frame)
+    requestAnimationFrame(tt=>this.loop(tt));
     const now=t/1000;let dt=now-this.last;this.last=now;if(dt>.1)dt=.1;
     shakeAmt=Math.max(0,shakeAmt-dt*55);
     pulseAmt=Math.max(0,pulseAmt-dt*3.5);
@@ -1400,7 +1407,6 @@ const Game={
       if(prev>=0&&n<1&&this._goDone!==true){this._goDone=true;Audio.countGo();}
       if(this.countT>3.1)this.beginPlay();
     }
-    requestAnimationFrame(tt=>this.loop(tt));
   },
   drawCountdown(){
     const cfg=SCENES[this.idx];
@@ -1433,19 +1439,33 @@ function canvasPoint(e){
   const r=canvas.getBoundingClientRect();
   return {x:clamp(e.clientX-r.left,0,W), y:clamp(e.clientY-r.top,0,H)};
 }
+// one active pointer at a time — a second finger landing must not register as
+// extra taps (in Cook that meant two instant life losses from one gesture)
+let activePointer=null;
 canvas.addEventListener('pointerdown',e=>{
   if(Game.state!=='play'||!Game.scene)return;
+  if(activePointer!==null)return;
+  activePointer=e.pointerId;
   e.preventDefault();
   Audio.resume();
   const p=canvasPoint(e);
   Game.scene.onDown(p.x,p.y);
 });
-window.addEventListener('pointerup',()=>{ if(Game.state==='play'&&Game.scene)Game.scene.onUp(); });
-window.addEventListener('pointercancel',()=>{ if(Game.state==='play'&&Game.scene)Game.scene.onUp(); });
+function releasePointer(e){
+  if(activePointer===null||e.pointerId!==activePointer)return;
+  activePointer=null;
+  if(Game.state==='play'&&Game.scene)Game.scene.onUp();
+}
+window.addEventListener('pointerup',releasePointer);
+window.addEventListener('pointercancel',releasePointer);
 window.addEventListener('keydown',e=>{
-  if(e.code==='Space'){
-    e.preventDefault();
-    if(Game.state==='play'&&Game.scene){Game.scene.onDown(W/2,H*.6);setTimeout(()=>Game.scene.onUp(),700);}
+  if(e.code!=='Space')return;
+  e.preventDefault(); // never scroll / activate a focused button
+  if(e.repeat)return;  // held space must not auto-fire taps
+  if(Game.state==='play'&&Game.scene){
+    const sc=Game.scene;
+    sc.onDown(W/2,H*.6);
+    setTimeout(()=>{ if(Game.state==='play'&&Game.scene===sc)sc.onUp(); },700);
   }
 });
 
@@ -1463,6 +1483,8 @@ quitBtn.addEventListener('click',e=>{
   e.stopPropagation();
   Audio.setHype(false);Audio.setMode('menu');
   FB.setTicker(false);buffEl.classList.remove('on');calloutEl.classList.remove('show');
+  FB.q.length=0;FB.busy=false; // don't leak queued callouts into the select screen / next run
+  activePointer=null;
   Game.state='select';
   quitBtn.style.display='none';
   setTheme('#0b0714');
