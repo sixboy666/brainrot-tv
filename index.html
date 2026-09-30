@@ -209,6 +209,7 @@ const Audio = {
     this.musicBus=this.ac.createGain();this.musicBus.gain.value=.16;this.musicBus.connect(this.master);
     this.sfxBus=this.ac.createGain();this.sfxBus.gain.value=.95;this.sfxBus.connect(this.master);
     this.cfg=this.TUNINGS.cook;
+    window.__A=this; // tiny engine handle (handy for debugging/QA)
   },
   resume(){ if(this.ac&&this.ac.state==='suspended')this.ac.resume(); },
   setScene(id){ this.cfg=this.TUNINGS[id]||this.TUNINGS.cook; },
