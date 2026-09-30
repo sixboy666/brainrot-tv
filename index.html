@@ -313,15 +313,18 @@ const Audio = {
     this.noise(.03,.05);
   },
   great(){
+    if(!this.ac)return;
     const t=this.ac.currentTime;
     [880,1175,1568].forEach((f,i)=>this.osc(t+i*.05,f,.12,'square',.17,this.sfxBus));
     this.noiseAt(t+.1,.12,.07,'highpass',6000);
   },
   coin(){ // buff pickup — bright staccato arpeggio
+    if(!this.ac)return;
     const t=this.ac.currentTime;
     [659,880,1319].forEach((f,i)=>this.osc(t+i*.06,f,.1,'square',.15,this.sfxBus));
   },
   riser(){ // combo milestone — tension sweep up then impact
+    if(!this.ac)return;
     const t=this.ac.currentTime;
     this.osc(t,220,.4,'sawtooth',.12,this.sfxBus,1100);
     this.noiseAt(t,.4,.06,'bandpass',900);
@@ -329,12 +332,14 @@ const Audio = {
     this.noiseAt(t+.38,.22,.14,'lowpass',1200);
   },
   bad(){ // comedic bonk, not a harsh buzz
+    if(!this.ac)return;
     const t=this.ac.currentTime;
     this.osc(t,320,.16,'square',.17,this.sfxBus,90);
     this.osc(t,120,.14,'sine',.16,this.sfxBus,60);
   },
-  boom(){ const t=this.ac.currentTime; this.osc(t,80,.5,'sawtooth',.2,this.sfxBus,32); this.noiseAt(t,.4,.12,'lowpass',900); },
+  boom(){ if(!this.ac)return; const t=this.ac.currentTime; this.osc(t,80,.5,'sawtooth',.2,this.sfxBus,32); this.noiseAt(t,.4,.12,'lowpass',900); },
   die(){ // boom + the meme "sad trombone" womp-womp-womp
+    if(!this.ac)return;
     this.boom();
     const t=this.ac.currentTime+.12;
     [392,330,262].forEach((f,i)=>{
@@ -343,6 +348,7 @@ const Audio = {
     this.osc(t+.62,130,.5,'sawtooth',.12,this.sfxBus,110);
   },
   win(){ // triumphant arpeggio + final major chord + sparkle
+    if(!this.ac)return;
     const t=this.ac.currentTime;
     [523,659,784,1047,1319].forEach((f,i)=>this.osc(t+i*.07,f,.13,'square',.15,this.sfxBus));
     [523,659,784].forEach(f=>this.osc(t+.42,f,.55,'triangle',.1,this.sfxBus));
@@ -350,6 +356,7 @@ const Audio = {
   },
   countBeep(){ this.tone(440,.12,'square',.18); },
   countGo(){
+    if(!this.ac)return;
     const t=this.ac.currentTime;
     this.osc(t,880,.35,'square',.22,this.sfxBus);
     this.osc(t,1320,.35,'square',.1,this.sfxBus);
@@ -917,11 +924,13 @@ function brow(cx,cy,len,ang,ink,w){
 }
 function sweat(cx,y,s,alpha){
   ctx.save();ctx.globalAlpha=alpha==null?1:alpha;
-  ctx.fillStyle='#8fd8ff';
+  // dark rim keeps the drop readable on light-colored characters
+  ctx.fillStyle='#8fd8ff';ctx.strokeStyle='rgba(70,150,200,.75)';ctx.lineWidth=Math.max(1,s*.18);
   ctx.beginPath();ctx.moveTo(cx,y-s);
   ctx.bezierCurveTo(cx+s*.85,y-s*.15,cx+s*.6,y+s*.7,cx,y+s*.7);
-  ctx.bezierCurveTo(cx-s*.6,y+s*.7,cx-s*.85,y-s*.15,cx,y-s);ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,.55)';ctx.beginPath();ctx.ellipse(cx-s*.2,y+s*.12,s*.16,s*.28,0,0,7);ctx.fill();
+  ctx.bezierCurveTo(cx-s*.6,y+s*.7,cx-s*.85,y-s*.15,cx,y-s);ctx.fill();ctx.stroke();
+  ctx.strokeStyle='rgba(70,150,200,.75)';
+  ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();ctx.ellipse(cx-s*.2,y+s*.12,s*.16,s*.28,0,0,7);ctx.fill();ctx.stroke();
   ctx.restore();
 }
 // one expressive eye. o:{ink,open,kind:'happy'|'x',lx,ly,pup,shock}
@@ -1147,6 +1156,7 @@ function drawGerald(x,y,r,o){
   const sq=o.pop||0;
   ctx.save();ctx.translate(x,y);
   blobShadow(r*1.02,r*.8,r*.15,.22);
+  if(m==='dead')ctx.rotate(.1);
   ctx.scale(1+sq*.13,1-sq*.16);
   // golden aura
   ctx.save();ctx.shadowColor='#ffd76a';ctx.shadowBlur=20+pulseAmt*16;
