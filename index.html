@@ -1476,9 +1476,15 @@ function fallbackCopy(txt,ok){
   document.body.removeChild(ta);
 }
 
-// debug hook + boot (resize needs the layout to be settled)
+// debug hook + boot — script sits at end of body so layout is already readable;
+// idempotent boot with several fallbacks (a single rAF never fires in hidden tabs)
 window.GAME=Game;
-requestAnimationFrame(()=>{ resize(); FB.init(); Game.start(); });
+let __booted=false;
+function boot(){ if(__booted)return;__booted=true; resize();FB.init();Game.start(); }
+boot();
+requestAnimationFrame(boot);
+window.addEventListener('focus',boot);
+setTimeout(boot,300);
 </script>
 </body>
 </html>
