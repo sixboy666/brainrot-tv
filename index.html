@@ -49,6 +49,26 @@
   .r-comment{margin-top:22px;font-size:16px;color:#38f0ff}
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 
+  /* ---- brainrot feedback layers ---- */
+  #callout{position:absolute;left:0;right:0;top:34%;z-index:26;text-align:center;pointer-events:none;opacity:0}
+  #callout.show{animation:callPop 1.5s ease-out forwards}
+  @keyframes callPop{0%{opacity:0;transform:scale(.3) rotate(-7deg)}12%{opacity:1;transform:scale(1.18) rotate(3deg)}22%{transform:scale(1) rotate(0)}78%{opacity:1}100%{opacity:0;transform:scale(1.06) translateY(-16px)}}
+  #callout .c-main{display:block;font-size:32px;letter-spacing:1px;white-space:nowrap;text-shadow:0 0 22px currentColor,4px 4px 0 #000,-2px -2px 0 #000}
+  #callout .c-sub{display:block;font-family:system-ui,sans-serif;font-size:12px;color:#38f0ff;margin-top:6px;letter-spacing:3px}
+  #buffBanner{position:absolute;left:8%;right:8%;top:8.5%;z-index:26;text-align:center;padding:11px 14px;border-radius:12px;font-size:17px;letter-spacing:1px;opacity:0;pointer-events:none;background:rgba(0,0,0,.72);display:none}
+  #buffBanner.on{display:block;animation:bannerPop 4s ease forwards}
+  @keyframes bannerPop{0%{opacity:0;transform:translateY(-22px) scale(.8)}10%{opacity:1;transform:scale(1.06)}18%{transform:scale(1)}82%{opacity:1}100%{opacity:0;transform:translateY(-10px)}}
+  #ticker{position:absolute;left:0;right:0;bottom:0;z-index:24;height:24px;line-height:24px;background:rgba(0,0,0,.62);border-top:1px solid rgba(255,255,255,.15);overflow:hidden;display:none}
+  #ticker.on{display:block}
+  #ticker .tick-inner{display:inline-flex;white-space:nowrap;animation:tick 26s linear infinite}
+  #ticker span{font-family:system-ui,sans-serif;font-size:11px;letter-spacing:1px;color:#b8a9d9;padding-right:40px}
+  @keyframes tick{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .btn-pulse{animation:btnPulse 1s infinite}
+  @keyframes btnPulse{0%,100%{box-shadow:0 0 16px rgba(255,61,240,.45),0 6px 0 #8a1278}50%{box-shadow:0 0 42px rgba(255,61,240,1),0 6px 0 #8a1278}}
+  .r-stat{font-family:system-ui,sans-serif;font-size:12px;color:#9a8ac0;margin-top:10px;letter-spacing:1px}
+  .r-taunt{font-size:15px;color:#ffd166;margin-top:14px;min-height:20px;padding:0 10px}
+  .btn-copy{margin-top:12px;max-width:340px;width:100%;padding:11px;border-radius:10px;border:1px solid rgba(56,240,255,.55);background:transparent;color:#38f0ff;font-family:system-ui,sans-serif;font-size:12px;letter-spacing:1px;cursor:pointer}
+  .btn-copy:active{transform:scale(.97)}
   #muteBtn{position:absolute;top:10px;right:10px;z-index:30;width:42px;height:42px;border-radius:50%;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.5);color:#fff;font-size:18px;cursor:pointer}
   #quitBtn{position:absolute;top:10px;left:10px;z-index:30;width:42px;height:42px;border-radius:12px;background:rgba(0,0,0,.55);border:2px solid rgba(255,255,255,.4);color:#fff;font-size:18px;cursor:pointer;display:none}
   @media(min-width:560px){#wrap{box-shadow:0 0 90px rgba(0,0,0,.9)}}
@@ -60,6 +80,11 @@
     <canvas id="game"></canvas>
     <button id="muteBtn" aria-label="mute">♪</button>
     <button id="quitBtn" aria-label="quit">✕</button>
+
+    <!-- brainrot feedback overlays -->
+    <div id="callout"><span class="c-main"></span><span class="c-sub"></span></div>
+    <div id="buffBanner"></div>
+    <div id="ticker"><div class="tick-inner"><span id="tickA"></span><span id="tickB"></span></div></div>
 
     <!-- TITLE -->
     <div class="screen" id="titleScreen">
@@ -90,12 +115,15 @@
       <div class="r-score" id="rScore">0</div>
       <div class="r-best" id="rBest"></div>
       <div class="r-new hidden" id="rNew">NEW BEST 🔥</div>
+      <div class="r-stat" id="rStat"></div>
       <div class="r-comment" id="rComment"></div>
-      <div style="height:24px"></div>
+      <div class="r-taunt" id="rTaunt"></div>
+      <div style="height:20px"></div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="againBtn">PLAY AGAIN</button>
+        <button class="btn btn-primary btn-pulse" id="againBtn">PLAY AGAIN</button>
         <button class="btn btn-ghost" id="modesBtn">MODES</button>
       </div>
+      <button class="btn-copy" id="copyBtn">📋 COPY BRAG TEXT</button>
     </div>
   </div>
 </div>
@@ -121,7 +149,11 @@ const muteBtn      = document.getElementById('muteBtn');
 const quitBtn      = document.getElementById('quitBtn');
 const rTier=document.getElementById('rTier'), rLine=document.getElementById('rLine'),
       rScore=document.getElementById('rScore'), rBest=document.getElementById('rBest'),
-      rNew=document.getElementById('rNew'), rComment=document.getElementById('rComment');
+      rNew=document.getElementById('rNew'), rComment=document.getElementById('rComment'),
+      rStat=document.getElementById('rStat'), rTaunt=document.getElementById('rTaunt'),
+      copyBtn=document.getElementById('copyBtn'),
+      calloutEl=document.getElementById('callout'), buffEl=document.getElementById('buffBanner'),
+      tickerEl=document.getElementById('ticker');
 
 let W=0,H=0,DPR=1;
 function resize(){
@@ -169,8 +201,9 @@ const Audio = {
     const g=this.ac.createGain();g.gain.setValueAtTime(vol||.1,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
     s.connect(f);f.connect(g);g.connect(this.ac.destination);s.start(t);
   },
-  good(){this.tone(660,.08,'square',.18,-180);this.noise(.04,.06);},
+  hit(combo){this.tone(520+Math.min(combo*38,720),.08,'square',.17,-90);this.noise(.035,.05);},
   great(){this.tone(880,.07,'square',.16);setTimeout(()=>this.tone(1175,.12,'square',.16),55);},
+  riser(){this.tone(280,.32,'sawtooth',.12,760);setTimeout(()=>this.tone(700,.2,'square',.1,500),60);},
   bad(){this.tone(140,.22,'sawtooth',.16,-60);},
   win(){[523,659,784,1047].forEach((f,i)=>setTimeout(()=>this.tone(f,.12,'square',.15),i*70));},
   boom(){this.tone(70,.5,'sawtooth',.22,-30);this.noise(.4,.12);},
@@ -221,33 +254,170 @@ class Floaters{
 }
 
 /* ------------------------------ visual juice ------------------------------ */
-let shakeAmt=0, pulseAmt=0;
+let shakeAmt=0, pulseAmt=0, hitstop=0, flashAmt=0, flashColor='255,255,255';
 function addShake(v){shakeAmt=Math.max(shakeAmt,v);}
 function pulse(){pulseAmt=1;}
+
+/* --------------------------- emoji burst system --------------------------- */
+const BURST_EMOJI=['💀','🔥','🗿','🤡','😭','⭐','✨','💥','🍞','🤖'];
+class Bursts{
+  constructor(){this.a=[];}
+  burst(x,y,syms,n){
+    for(let i=0;i<n;i++){const a=rand(-Math.PI,0),sp=rand(90,340);
+      this.a.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-90,age:0,life:rand(.5,1.1),sym:pick(syms),
+        size:rand(18,30),rot:rand(0,6.28),vr:rand(-7,7)});}
+  }
+  rain(syms,n){
+    for(let i=0;i<n;i++)this.a.push({x:rand(0,W),y:rand(-H*.4,0),vx:rand(-30,30),vy:rand(70,190),
+      age:0,life:rand(1.3,2.4),sym:pick(syms),size:rand(20,32),rot:rand(0,6.28),vr:rand(-4,4)});
+  }
+  update(dt){for(const p of this.a){p.age+=dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=520*dt;p.vx*=.98;p.rot+=p.vr*dt;}
+    this.a=this.a.filter(p=>p.age<p.life&&p.y<H+50);}
+  draw(){
+    for(const p of this.a){const k=p.age/p.life;
+      ctx.globalAlpha=k<.08?k/.08:1-(k-.08)/.92;
+      ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+      ctx.font=p.size+'px Impact';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(p.sym,0,0);ctx.restore();}
+    ctx.globalAlpha=1;
+  }
+  clear(){this.a.length=0;}
+}
+
+/* ----------------------- big callouts (QUEUE, no overwrite) ---------------- */
+const FB={
+  q:[], busy:false,
+  init(){
+    calloutEl.addEventListener('animationend',()=>{calloutEl.classList.remove('show');this.busy=false;this._pump();});
+    buffEl.addEventListener('animationend',()=>{buffEl.classList.remove('on');});
+    // brainrot ticker content (duplicated for a seamless -50% loop)
+    const phrases=["⚠ WARNING: EXTREMELY CATCHY","GOOBER COOKED FOR 48 HOURS STRAIGHT",
+      "SIR NUGGET NAMED EMPEROR OF OHIO","BAO BAO'S AURA MEASURED AT 9001",
+      "GERALD REFUSES TO LOSE AGAIN","FANUM TAX RATES AT ALL-TIME HIGH",
+      "LOCAL BRO THINKS HE CAN COOK — HE CAN","SKIBIDI SIGNAL: STRONG",
+      "1M GOOBERS COULD NOT BE REACHED FOR COMMENT","RIZZ SEASON EXTENDED INDEFINITELY",
+      "THE ALGORITHM IS WATCHING 👁","MEWING RECORD BROKEN, AGAIN",
+      "THIS IS YOUR FEED NOW","TOUCH GRASS CHALLENGE: 0 PARTICIPANTS",
+      "STONKS, BUT FOR BRAIN CELLS","SIGMA LEVELS OFF THE CHARTS",
+      "COMMENT SECTION CURRENTLY IN SHAMBLES","BRO IS COOKED AND SEASONED"];
+    const line=phrases.join("    ✦    ")+"    ✦    ";
+    document.getElementById('tickA').textContent=line;
+    document.getElementById('tickB').textContent=line;
+  },
+  callout(main,sub,color){this.q.push({main,sub:sub||'',color:color||'#ffd166'});this._pump();},
+  _pump(){
+    if(this.busy)return;const n=this.q.shift();if(!n)return;this.busy=true;
+    calloutEl.querySelector('.c-main').textContent=n.main;
+    calloutEl.querySelector('.c-main').style.color=n.color;
+    const sub=calloutEl.querySelector('.c-sub');
+    sub.textContent=n.sub;
+    void calloutEl.offsetWidth; // restart the CSS animation
+    calloutEl.classList.add('show');
+  },
+  banner(text,color){
+    buffEl.textContent=text;
+    buffEl.style.color=color;buffEl.style.borderColor=color;
+    buffEl.classList.remove('on');void buffEl.offsetWidth;buffEl.classList.add('on');
+  },
+  setTicker(on){tickerEl.classList.toggle('on',on);}
+};
+
+/* ------------------------- combo milestones & pools ----------------------- */
+const MILESTONES=[
+  [3,"HE'S COOKING",'#ffd166'],[5,"SHEESH",'#38f0ff'],[8,"SIGMA DETECTED",'#ff3df0'],
+  [12,"BRAINROT ACTIVATED",'#ff9a3c'],[16,"GIGACHAD STATUS",'#ffd166'],
+  [22,"FINAL BOSS ENERGY",'#ff5a4d'],[30,"MAXIMUM GOOB",'#ff3df0'],
+  [40,"GOD OF BRAINROT",'#ffe89a'],[50,"TOUCH GRASS? NO.",'#ffffff'],
+  [75,"BRO IS UNSTOPPABLE",'#38f0ff'],[100,"THE FEED IS YOURS",'#7dff8a']
+];
+const SCORE_CALLS=[[25,'25 UP — WARMING UP'],[50,'50 PIECE'],[100,'HUNDO. NICE.'],[200,'200 AND ZYZZ'],[400,'BROKE THE ALGORITHM']];
+const HIT_NORM=['based','real','W','sheesh','no cap','yup','goated','fr fr','clean'];
+const HIT_PERF=['MUCH WOW','STONKS ↑','REKT!','DIAMOND HANDS','HE ATE','PERFECT!','BIG BRAIN','L + RATIO AVOIDED'];
+const CHAT=[
+  ['@goober_42','let him cook fr 🍳'],['@sigmakitten',"nah he's built different"],
+  ['@ohio_resident','this should NOT be legal'],['@rizzlord99','W W W'],
+  ['@mewing_monk','🗿'],['@rat_enthusiast','L + ratio + you fumbled'],
+  ['@based_beluga','bro is NOT real'],['@skibidi_sam','first time? 💀'],
+  ['@aura_inspector','aura levels concerning'],['@nugget_fan7','GERALD WOULD WIN'],
+  ['@cringe_patrol','cringe: NOT found'],['@fanum_auditor','10/10 no fanum tax'],
+  ['@hater_in_ohio','mid. (he is lying)'],['@goat_watcher69','i watched this 47 times']
+];
+const JOKE_BANNERS=[
+  ["⚠ WARNING: EXTREMELY CATCHY",'#ff5a4d'],["the algorithm is watching 👁",'#38f0ff'],
+  ["FANUM TAX? just kidding.",'#ffd166'],["skibidi signal: STRONG",'#ff3df0'],
+  ["your aura is leaking 🗿",'#9aa0b0'],["OHIO RESIDENT DETECTED",'#ff9a3c'],
+  ["brainrot levels rising",'#ff3df0'],["this is your feed now",'#38f0ff'],
+  ["scientists could not explain this",'#7dff8a']
+];
+const FAKE_STATS=[
+  "only 4% of players last this long (probably cap)",
+  "the algorithm has flagged this run 👁",
+  "scientists hate this one simple combo",
+  "your FBI agent just took notes",
+  "certified: NOT mid",
+  "this run has been seen by 0 people. until now.",
+  "47 goobers endorse this performance",
+  "estimated skibidi level: concerning",
+  "this score beat 69% of players (nice)",
+  "the comment section is in shambles because of you"];
 
 /* ============================================================
    SCENES — meme FORMAT is the rule.
    Each scene implements: reset(), update(dt), onDown(x,y), onUp(), draw()
    ============================================================ */
 class Scene{
-  constructor(cfg){Object.assign(this,cfg);this.floaters=new Floaters();}
+  constructor(cfg){Object.assign(this,cfg);this.floaters=new Floaters();this.bursts=new Bursts();}
   reset(){
     this.t=0;this.score=0;this.combo=0;this.lives=3;this.over=false;this.done=false;
-    this.floaters.a.length=0;this._reset();
+    this.floaters.a.length=0;this.bursts.clear();
+    this.buff=0;this._chatT=rand(2.5,5);this._evtT=rand(6,9);this._scoreMarks=new Set();
+    this._reset();
   }
   fault(msg){
     this.lives--;this.combo=0;
     this.floaters.add(msg,this.flash,true);
-    Audio.bad();addShake(11);
+    this.bursts.burst(W/2,H*.45,['💥','💀'],8);
+    Audio.bad();addShake(11);flashAmt=.35;flashColor='255,40,40';
+    if(this.lives===1){setTimeout(()=>{if(!this.over&&Game.scene===this)FB.callout('BRO ON HIS LAST LIFE 💀','the comment section is watching','#ff5a4d');},350);}
     if(this.lives<=0){this.over=true;Audio.boom();}
   }
-  good(points,msg,big){
-    this.score+=points;this.combo+=points;
-    if(msg)this.floaters.add(msg,big?'#ffd166':'#ffffff',big);
-    if(points>=3)Audio.great();else Audio.good();
-    pulse();addShake(big?13:6);
+  good(points,msg,big,x,y){
+    x=x==null?W/2:x; y=y==null?H*.5:y;
+    if(this.buff>0)points*=2;
+    this.score+=points;this.combo++;
+    const say=msg||(points>=3?pick(HIT_PERF):pick(HIT_NORM));
+    this.floaters.add(say,points>=3?'#ffd166':'#ffffff',points>=3);
+    this.bursts.burst(x,y,points>=3?['🔥','⭐','✨','💀']:['🔥','💀'],points>=3?12:5);
+    if(points>=3){Audio.great();hitstop=Math.max(hitstop,.07);}else{Audio.hit(this.combo);}
+    pulse();addShake(points>=3?13:6);
+    if(points>=3)flashAmt=Math.max(flashAmt,.18),flashColor='255,230,120';
+    // combo milestone callouts — queued so none get overwritten
+    const m=MILESTONES.find(z=>z[0]===this.combo);
+    if(m){
+      FB.callout(m[1],'x'+this.combo+' COMBO',m[2]);
+      this.bursts.rain(BURST_EMOJI,26);Audio.riser();
+      hitstop=Math.max(hitstop,.13);addShake(20);flashAmt=.4;flashColor='255,255,255';
+    }
+    // score callouts
+    for(const sv of SCORE_CALLS){
+      if(this.score>=sv[0]&&!this._scoreMarks.has(sv[0])){this._scoreMarks.add(sv[0]);FB.callout(sv[1],'POINTS','#38f0ff');}
+    }
   }
-  update(dt){this.t+=dt;this.floaters.update(dt);}
+  fireEvent(){
+    if(Math.random()<.38){
+      this.buff=4.5;FB.banner('2× SIGMA BUFF — DOUBLE POINTS!','#ffd166');Audio.riser();
+    }else{const j=pick(JOKE_BANNERS);FB.banner(j[0],j[1]);}
+  }
+  update(dt){
+    this.t+=dt;this.floaters.update(dt);this.bursts.update(dt);
+    if(!this.over){
+      if(this.buff>0)this.buff-=dt;
+      this._chatT-=dt;
+      if(this._chatT<=0){this._chatT=rand(3.5,7.5);const c=pick(CHAT);this.floaters.add(c[0]+': '+c[1],'#7fe0ff');}
+      this._evtT-=dt;
+      if(this._evtT<=0){this._evtT=rand(8,14);this.fireEvent();}
+    }
+  }
   _reset(){} onDown(){} onUp(){} draw(){}
 }
 
@@ -277,7 +447,7 @@ class CookScene extends Scene{
       this.ct=0;this._t=0;
     }else{
       const perfect=this.st<this.serveWin*.55;
-      this.good(perfect?3:1, perfect?'HE COOKED. HE ATE. 🔥':pick(['based serve','W food','the goat cooked']), perfect);
+      this.good(perfect?3:1, perfect?'HE COOKED. HE ATE. 🔥':pick(['based serve','W food','the goat cooked']), perfect, W/2, H*.48);
       this.cookDur=Math.max(1.1,this.cookDur-.09);
       this.serveWin=Math.max(.45,this.serveWin-.045);
       this.phase='cook';this.ct=0;this.st=0;this._t=0;
@@ -344,7 +514,7 @@ class VibeScene extends Scene{
     for(let i=this.cards.length-1;i>=0;i--){
       const c=this.cards[i];
       if(x>c.x&&x<c.x+c.w&&y>c.y-c.h/2&&y<c.y+c.h/2){
-        if(c.v.s===this.vibe.s){this.good(1,pick(['real','W follower','based','the goat']));}
+        if(c.v.s===this.vibe.s){this.good(1,pick(['real','W follower','based','the goat']),false,c.x+c.w/2,c.y);}
         else{this.fault('wrong vibe — cringe 💀');}
         this.cards.splice(i,1);return;
       }
@@ -401,7 +571,7 @@ class ReactScene extends Scene{
     const i=clamp(Math.floor(x/(W/5)),0,4);
     if(SLOTS[i].s===this.ev.e){
       const fast=this.et<this.win*.45;
-      this.good(fast?3:1,fast?pick(['INSTANT REACT 🔥','you get the internet','W comment']):pick(['real','accurate 💀','based']),fast);
+      this.good(fast?3:1,fast?pick(['INSTANT REACT 🔥','you get the internet','W comment']):pick(['real','accurate 💀','based']),fast,i*W/5+W/10,H*.87);
       this.ev=null;
     }else{
       this.fault(`bro thought ${SLOTS[i].s} 💀`);
@@ -462,9 +632,7 @@ class EscScene extends Scene{
   }
   onDown(){
     if(this.over||this.collapsing)return;
-    this.score++;this.combo++;
-    if(this.score%5===0)this.floaters.add(`x${this.score} CHAOS LAYERS`,this.chaos>75?'#ff5a4d':'#ffd166',true);
-    Audio.good();pulse();addShake(this.chaos>75?15:7);
+    this.good(1,(this.score+1)%5===0?`x${this.score+1} CHAOS LAYERS`:pick(['more chaos','push it 🔥','it gets worse','why stop now']),false,W/2,H*.52);
     this.chaos=Math.max(this.score*3,this.chaos-9);
   }
   draw(){
@@ -515,7 +683,7 @@ class PovScene extends Scene{
   winIt(){
     if(this.won)return;this.won=true;
     const fast=this.pt<this.win*.45;
-    this.good(fast?3:1,pick(['W main character','the goat arrived','based POV','you ate']),fast);
+    this.good(fast?3:1,pick(['W main character','the goat arrived','based POV','you ate']),fast,W/2,H*.55);
     this.pov=null;
   }
   onDown(){if(this.over||this.won||!this.pov)return;this.taps++;this.holding=true;Audio.tone(440+this.taps*110,.06,'square',.14);}
@@ -597,12 +765,55 @@ function drawGerald(x,y,r){
 /* --------------------------------- HUD ------------------------------------ */
 function drawHud(s,hideLives){
   ctx.fillStyle='rgba(0,0,0,.4)';ctx.fillRect(0,0,W,H*.055);
-  ctx.textAlign='left';ctx.fillStyle='#fff';ctx.font='17px Impact';
-  ctx.fillText('SCORE '+s.score,10,H*.038);
-  ctx.textAlign='right';ctx.fillText('COMBO x'+s.combo,W-10,H*.038);
+  ctx.textAlign='left';ctx.fillStyle=s.buff>0?'#ffd166':'#fff';
+  ctx.font=(s.buff>0?'18px':'17px')+' Impact';
+  ctx.fillText((s.buff>0?'2× ':'')+'SCORE '+s.score,10,H*.038);
+  // combo scales up and heats up as the streak grows
+  ctx.textAlign='right';
+  const hot=s.combo>=8;
+  ctx.font=(17+Math.min(s.combo,24)*.55)+' Impact';
+  ctx.fillStyle=hot?`hsl(${(performance.now()/7)%360},100%,65%)`:'#fff';
+  ctx.fillText(s.combo>0?'COMBO x'+s.combo:'COMBO x0',W-10,H*.04);
   if(!hideLives){
     ctx.textAlign='center';
     for(let i=0;i<3;i++){ctx.fillStyle=i<s.lives?'#ff3df0':'rgba(255,255,255,.2)';ctx.font='17px Impact';ctx.fillText('♥',W/2-24+i*24,H*.042);}
+  }
+}
+
+/* --------------------- brainrot screen chaos overlays --------------------- */
+function drawPlayOverlays(s){
+  // full-screen hit flash
+  if(flashAmt>0){ctx.fillStyle=`rgba(${flashColor},${flashAmt*.5})`;ctx.fillRect(0,0,W,H);}
+  // beat-synced tint that escalates with combo
+  if(s.combo>=8){
+    const hue=(performance.now()/7)%360;
+    ctx.fillStyle=`hsla(${hue},100%,60%,${.05+Math.min(s.combo,30)*.004+pulseAmt*.05})`;
+    ctx.fillRect(0,0,W,H);
+  }
+  // rainbow frame once the streak gets unhinged
+  if(s.combo>=15){
+    const hue=(performance.now()/4)%360;
+    ctx.strokeStyle=`hsla(${hue},100%,62%,${.55+pulseAmt*.4})`;
+    ctx.lineWidth=7;ctx.strokeRect(4,4,W-8,H-8);
+  }
+  // CRT scanlines at high combo
+  if(s.combo>=20){
+    ctx.fillStyle='rgba(255,255,255,.04)';
+    for(let y=0;y<H;y+=5)ctx.fillRect(0,y,W,1.5);
+  }
+  // 2× buff: golden vignette pulsing
+  if(s.buff>0){
+    const a=.22+.12*Math.sin(performance.now()/90);
+    const g=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.75);
+    g.addColorStop(0,'rgba(255,209,102,0)');g.addColorStop(1,`rgba(255,209,102,${a})`);
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  }
+  // one life left: red danger vignette
+  if(s.lives===1&&!s.over){
+    const a=.18+.18*Math.sin(performance.now()/130);
+    const g=ctx.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.78);
+    g.addColorStop(0,'rgba(255,40,40,0)');g.addColorStop(1,`rgba(255,30,30,${a})`);
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
   }
 }
 
@@ -646,6 +857,7 @@ const Game={
     showScreen(null);
     quitBtn.style.display='block';
     setTheme(SCENES[i].flash);
+    FB.setTicker(true);
     Audio.init();Audio.resume();Audio.startBeat();
   },
   beginPlay(){
@@ -657,17 +869,30 @@ const Game={
   finish(){
     this.state='result';
     quitBtn.style.display='none';
+    FB.setTicker(false);
+    buffEl.classList.remove('on');calloutEl.classList.remove('show');FB.q.length=0;FB.busy=false;
     Audio.stopBeat();Audio.win();
     const s=this.scene,cfg=SCENES[this.idx],key='brainrotTV2_'+cfg.id;
     const prev=+(localStorage.getItem(key)||0),isNew=s.score>prev;
     if(isNew)localStorage.setItem(key,String(s.score));
+    const best=Math.max(prev,s.score);
     const tier=this.tier(s.score);
     rTier.textContent=tier.name;rTier.style.color=cfg.flash;
     rLine.textContent=tier.line;
     rScore.textContent=s.score;
-    rBest.textContent=isNew?'first run — go again':'best: '+Math.max(prev,s.score);
+    rBest.textContent=isNew?'first run — go again':'best: '+best;
     rNew.classList.toggle('hidden',!isNew);
     rComment.textContent='"'+pick(REACTS)+'"';
+    // fake algorithm stat — pure flavor, makes the run feel witnessed
+    rStat.textContent=pick(FAKE_STATS);
+    // taunt designed to make them hit PLAY AGAIN
+    let taunt;
+    if(!isNew&&best-s.score>0&&best-s.score<=3)taunt=`only ${best-s.score} away from your best. BRO? 💀`;
+    else if(s.score<5)taunt=pick(['the comment section is laughing. again?','bro fumbled immediately. again?',"that can't be your real score. again?"]);
+    else if(s.score<20)taunt=pick(["mid score. you're better than this (allegedly). again?",'the algorithm expected more. prove it. again?']);
+    else taunt=pick(['GOAT behavior. but can you do it twice? again?','one more run. you know you want to.','the feed demands an encore. again?']);
+    rTaunt.textContent=taunt;
+    copyBtn.textContent='📋 COPY BRAG TEXT';
     showScreen('result');
     setTheme('#0b0714');
   },
@@ -683,12 +908,16 @@ const Game={
     const now=t/1000;let dt=now-this.last;this.last=now;if(dt>.1)dt=.1;
     shakeAmt=Math.max(0,shakeAmt-dt*55);
     pulseAmt=Math.max(0,pulseAmt-dt*3.5);
+    flashAmt=Math.max(0,flashAmt-dt*2.4);
     ctx.save();
     if(shakeAmt>0)ctx.translate(rand(-shakeAmt,shakeAmt),rand(-shakeAmt,shakeAmt));
     if(this.state==='countdown')this.drawCountdown(dt);
     else if(this.state==='play'){
-      this.scene.update(dt);
+      // hitstop freezes gameplay logic for a few ms on juicy hits (not drawing)
+      if(hitstop>0)hitstop-=dt; else this.scene.update(dt);
       this.scene.draw();
+      this.scene.bursts.draw();
+      drawPlayOverlays(this.scene);
       if(this.scene.over){this.finish();}
     }else{
       // menu backdrop: animated gradient on canvas
@@ -765,15 +994,33 @@ document.getElementById('modesBtn').addEventListener('click',()=>{setTheme('#0b0
 quitBtn.addEventListener('click',e=>{
   e.stopPropagation();
   Audio.stopBeat();
+  FB.setTicker(false);buffEl.classList.remove('on');calloutEl.classList.remove('show');
   Game.state='select';
   quitBtn.style.display='none';
   setTheme('#0b0714');
   showScreen('select');
 });
 
+// one-tap brag copy for sharing the meme
+copyBtn.addEventListener('click',e=>{
+  e.stopPropagation();
+  const tier=rTier.textContent,score=rScore.textContent,name=SCENES[Game.idx].name;
+  const txt=`bro just cooked ${score} points — rated ${tier} — on "${name}" in BRAINROT.TV 💀 can you beat it? https://sixboy666.github.io/brainrot-tv/`;
+  const done=()=>{copyBtn.textContent='COPIED — GO POST IT 🔥';};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(done).catch(()=>fallbackCopy(txt,done));
+  }else fallbackCopy(txt,done);
+});
+function fallbackCopy(txt,ok){
+  const ta=document.createElement('textarea');ta.value=txt;ta.style.position='fixed';ta.style.opacity='0';
+  document.body.appendChild(ta);ta.select();
+  try{document.execCommand('copy');ok();}catch(e){copyBtn.textContent='copy failed — just tell them manually 💀';}
+  document.body.removeChild(ta);
+}
+
 // debug hook + boot (resize needs the layout to be settled)
 window.GAME=Game;
-requestAnimationFrame(()=>{ resize(); Game.start(); });
+requestAnimationFrame(()=>{ resize(); FB.init(); Game.start(); });
 </script>
 </body>
 </html>
