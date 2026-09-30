@@ -687,6 +687,8 @@ const GAME = {
     requestAnimationFrame(t=>this.loop(t));
     // input
     const tap=(e)=>{
+      // never steal clicks from the mute button
+      if(e.target && e.target.closest && e.target.closest('#mute')) return;
       e.preventDefault();
       AUD.init(); AUD.resume();
       const r=C.getBoundingClientRect();
@@ -694,8 +696,11 @@ const GAME = {
       const x=(tch.clientX-r.left), y=(tch.clientY-r.top);
       this.handleTap(x,y);
     };
-    C.addEventListener('touchstart', tap, {passive:false});
-    C.addEventListener('mousedown', tap);
+    // listen on the whole stage so clicks in the black margins (desktop) also
+    // respond — previously only the <canvas> element had the handler
+    const host = document.getElementById('stage');
+    host.addEventListener('touchstart', tap, {passive:false});
+    host.addEventListener('mousedown', tap);
     window.addEventListener('keydown', e=>{
       if(e.code==='Space'){ e.preventDefault(); this.handleTap(W/2,H/2); }
       if(e.code==='ArrowLeft'){ if(this.state==='select') this.selIdx=(this.selIdx+SCENES.length-1)%SCENES.length; }
@@ -703,12 +708,16 @@ const GAME = {
     });
   },
   handleTap(x,y){
-    if(this.state==='title'){ this.state='select'; return; }
+    if(this.state==='title'){
+      // START GAME button — or any tap on the title screen enters the feed
+      this.state='select'; return;
+    }
     if(this.state==='select'){
-      // check scene chip hit
-      const n=SCENES.length, w=Math.min(W/ n, 96), total=w*n, x0=(W-total)/2, y=H-90;
-      for(let i=0;i<n;i++){ const cx=x0+i*w+w/2; if(Math.abs(x-cx)<w/2 && Math.abs(y-y)<28){ this.startCountdown(i); return; } }
-      // also allow tapping the big preview
+      // scene chip hit (vertical check fixed — the old `const y` shadowed the
+      // tap y, making Math.abs(y-y) always 0 so chips only responded by x)
+      const n=SCENES.length, w=Math.min(W/n, 96), total=w*n, x0=(W-total)/2, chipY=H-90;
+      for(let i=0;i<n;i++){ const cx=x0+i*w+w/2; if(Math.abs(x-cx)<w/2 && Math.abs(y-chipY)<30){ this.startCountdown(i); return; } }
+      // big preview card = PLAY button
       this.startCountdown(this.selIdx); return;
     }
     if(this.state==='play' && RUN.active){
@@ -798,10 +807,20 @@ const GAME = {
       {f:drawGerald,x:W*0.8,y:H*0.72,c:'#ffd76a',n:'GERALD'},
     ];
     chars.forEach(ch=>{ ch.f(X, ch.x, ch.y, 30+PULSE*4, 0.2); X.fillStyle=ch.c; X.font='12px Impact'; X.fillText(ch.n, ch.x, ch.y+50); });
-    // CTA
-    const a=(Math.sin(this.t0()*3)+1)/2;
-    X.fillStyle=`rgba(255,255,255,${0.5+0.5*a})`; X.font='24px Impact';
-    X.fillText('TAP TO ENTER THE FEED', W/2, H*0.92);
+    // START GAME button (the whole screen is also tappable — forgiving)
+    const bw=W*0.64, bh=60, bx=(W-bw)/2, by=H*0.84;
+    this._startBtn={x:bx,y:by,w:bw,h:bh};
+    const pa=(Math.sin(this.t0()*3)+1)/2;
+    X.save();
+    X.shadowColor='#ff4adf'; X.shadowBlur=18+pa*22;
+    X.fillStyle='#ff4adf'; roundRect(bx,by,bw,bh,16); X.fill();
+    X.restore();
+    X.strokeStyle='#fff'; X.lineWidth=3; roundRect(bx,by,bw,bh,16); X.stroke();
+    X.fillStyle='#fff'; X.font='30px Impact'; X.textAlign='center'; X.textBaseline='middle';
+    X.fillText('START GAME', W/2, by+bh/2+2);
+    X.textBaseline='alphabetic';
+    X.font='12px Impact'; X.fillStyle='#888';
+    X.fillText('tap anywhere to enter the feed', W/2, by+bh+22);
   },
   t0(){ return performance.now()/1000; },
   /* ---------- SELECT ---------- */
@@ -824,6 +843,10 @@ const GAME = {
     X.restore();
     X.fillStyle='#fff'; X.font='26px Impact'; X.fillText(s.name, W/2, cy+ch-50);
     X.fillStyle=s.flash; X.font='13px Impact'; wrap(s.tag, 36).forEach((ln,i)=>X.fillText(ln, W/2, cy+ch-26+i*16));
+    // pulsing PLAY affordance — makes the card read as a button
+    const pp=(Math.sin(this.t0()*4)+1)/2;
+    X.globalAlpha=0.55+0.45*pp; X.fillStyle=s.flash; X.font='18px Impact';
+    X.fillText('▶ TAP TO PLAY', W/2, cy+ch*0.72); X.globalAlpha=1;
     // chips
     const n=SCENES.length, w=Math.min(W/n, 96), total=w*n, x0=(W-total)/2, y=H-90;
     for(let i=0;i<n;i++){ const cx=x0+i*w+w/2; const sel=i===this.selIdx;
