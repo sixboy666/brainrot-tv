@@ -697,10 +697,12 @@ const GAME = {
       this.handleTap(x,y);
     };
     // listen on the whole stage so clicks in the black margins (desktop) also
-    // respond — previously only the <canvas> element had the handler
+    // respond. Use 'click' (not 'mousedown') so synthetic .click() calls and
+    // real mouse taps both fire; touchstart handles mobile with preventDefault
+    // which suppresses the duplicated synthetic click afterwards.
     const host = document.getElementById('stage');
     host.addEventListener('touchstart', tap, {passive:false});
-    host.addEventListener('mousedown', tap);
+    host.addEventListener('click', tap);
     window.addEventListener('keydown', e=>{
       if(e.code==='Space'){ e.preventDefault(); this.handleTap(W/2,H/2); }
       if(e.code==='ArrowLeft'){ if(this.state==='select') this.selIdx=(this.selIdx+SCENES.length-1)%SCENES.length; }
